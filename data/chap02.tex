@@ -376,59 +376,61 @@ $\mathbf{P}(O_c(t_{iq_1}) = O_c(t_{iq_2})) = {sim}_i\  (constant)$
 
 \section{实验结果及分析}
 \label{sec: experiments}
-A comprehensive evaluation of our approach should inspect its performance on two aspects, (1) how much ``correcter" is the debugged oracle compared to the original one and (2) how much the debugged oracle improves SFL algorithms' performance. To answer these two questions, we conducted two corresponding experiments. The results are presented in the following two sections.
+算法\ref{alg: debugMain}性能需两个方面评价，一是纠错后的测试准则的判断结果正确性有多大程度的提升，二是使用纠错后的测试结果应用SFL算法的错误定位精度有多大程度的提升。本节将以两个实验及其实验数据分别对这两个问题做出回答。
 
-\subsection{Repair the Erroneous Test Oracle}
+\subsection{修复测试准则错误}
 \label{subsection: repair test oracle}
-Our first experiment evaluates the quality of the debugged oracle. In this experiment, we used the Siemens Test Suite as our subject because it contains enough similar entities of programs, which ensures a statistical significant result. Same as when we inspected erroneous oracles' impact on SFL algorithms, we first generated the correct oracles of the Siemens Test Suites and randomly mutated them with a mutation rate $mr$ ranging from $0.01$ to $0.1$.
-Remember the value of two input parameters needs to be decided, i.e. the number of voters $n$ and the debugging threshold $thres$. To achieve better performance, we first analysed a sample of the subject test suites and discovered that nearly all test cases own more than 10 neighbours with similarity above 0.9. This was confirmed by a later analysis as approximately over 95\% test cases own such number of neighbours. Referring to Table \ref{tab:calculate fp fn} we decided $n=4$ is proper for gaining satisfactory performance. As with $thres$, according to our analysis, as long as $2 < \hat{n} < 3$ the final performance should be satisfactory. For convenience we fixed it on 0.58 for all experiments.
+实验一的目的是评价纠错后的测试准则的正确率，并与纠错前的测试准则作对比。在本实验中，我们使用西门子测试集作为对象程序，这是由于该测试集中的每个程序均含有足够多的测试变体，从而能够保证测试结果的统计显著性。与第三节中的实验相似，我们首先生成正确的测试准则，并将测试准则的判断按照概率$mr$随机改变，其中$mr \in [0.01, 0.1]$。
 
-With $n = 4$ and $thres = 0.58$, we applied our debugging algorithm to the oracle mutants and compared the output oracles to the original correct ones. According to \cite{Steimann:2013:TVV:2483760.2483767} we repeated our experiment 5 times to achieve a stable and convincing result. Three quantitative index values are selected as assessment criteria, namely, ``recall", representing our algorithm's ability to acutely discover the error, ``precision", indicating the ability to preserve the already correct judgements and ``f1 measure", synthesizing the former two.
+算法\ref{alg: debugMain}在具体实现时需要确定两个参数的值，即投票集合大小$n$和纠错阈值$thres$。遵照上节中的参数选择方法，我们首先随机选取了一部分测试用例作为样本，结果表明几乎所有的测试用例都有至少10个相似值超过0.9的邻居。完整的实验数据表明，事实上整个测试集中约有超过95\%的测试用例拥有相同数量的邻居。参考表\ref{tab:calculate fp fn}中的数据，我们认为$n=4$已经足够获得较好的性能。另一方面，在$thres$的设置上，根据前文的分析，只要$2 < \hat{n} < 3$就可以得到一个较好的结果。最终在所有的程序上我们都使用了$thres = 0.58$这一参数值。
 
-Fig. \ref{fig:mut_rec_prec_cropped} presents the overall distribution of recall, precision and f1 measure for all oracle mutants and error rates. For recall $rec$ and a mutation rate $mr$, the proportion value $p(rec, mr)$ is defined as the ratio of mutants whose corresponding output oracle achieved recall value greater or equal than $rec$ in all mutants mutated at $mr$. For precision $pre$ and f1 measure $f1$, $p(pre, mr)$ and $p(f1, mr)$ are similarly defined.
+将$n = 4$和$thres = 0.58$带入到算法框架中，我们在待修改的测试准则上运行了调试算法，并将输出结果与输入结果对比。按照\cite{Steimann:2013:TVV:2483760.2483767}中的要求，为获得稳定可靠的结果，我们将实验重复了五次。实验结果的观察指标共三个，包括（1）召回率（recall），表示算法发现测试准则错误的能力，（2）精度（precision），表示算法保留测试准则正确判断的能力，（3）F1指数（f1 measure），表示前两个指标的综合成绩。
 
-As shown in the figure, averagely our algorithm achieves 85\% recall rate on over 90\% mutants, meaning over 85\% oracle errors are successfully identified. As to precision, mutants at different mutation rates respond differently. As the median, when $mr = 0.05$, precision reaches 75\% for over 80\% mutants, i.e. over 75\% of the highlighted test cases are truly misjudged in the input oracle. This fraction expands to 80\% as $mr$ increases to 0.1. Figure of F1 measure is similar to precision as value of recall is close to 1.
+图\ref{fig:mut_rec_prec_cropped}展现了三个指标在所有程序变体和不同错误率下的分布情况。其中，给定召回率$rec$、错误率$mr$，纵坐标比率$p(rec, mr)$的含义是，在错误率$mr$时，所有输出测试准则的召回率不低于$rec$的测试用例占测试集的比例$mr$。 对精度$pre$和F1指数$f1$，$p(pre, mr)$和$p(f1, mr)$也有类似定义。
 
-Contour projection on the x-y panel presents some interesting phenomena.
-Firstly, when $mr$ is lower than 0.02, over 20\% highlighted test cases are false positives for 50\% mutants, and over 40\% for 30\% mutants. This accords with intuition when considering the relative high recall. 90\% errors in around  80\% oracle mutants are marked out, thus it is very likely that many other oracle judgements are wronged. 
+如图所示，平均来看算法在超过90\%的程序变体上达到了85\%的召回率，也即超过85\%的测试准则错误被成功发现。另一方面，算法在不同错误率的测试准则上达到的精度也各不相同。当$mr$取中位数$0.05$时，在超过80\%的程序变体上算法的精度达到了75\%，即算法所识别出的测试准则错误中超过75\%的确是错误。当$mr$增长到$0.1$时，算法精度上升到80\%。这一趋势也在F1指数的图像上显示出来，当$mr$趋向1时，由于召回率接近1，F1指数的图像与精度类似。
+
+观察在x-y平面上的等高线投影可以发现一个有趣的现象。首先，当$mr$低于$0.02$时，在50\%的测试用例上，算法识别出的错误中超过20\%是FP，在30\%的测试用例上，FP比率超过了40\%。另一方面，召回率在约80\%左右的程序变体上超过了90\%，可见实验数据与直觉完全相符，当召回率很高时，FN较低，FP较高，精度也较低。
 %More importantly, this also substantiates our theoretical analysis of the probability of false positive and false negative. Referring to Table \ref{tab:calculate fp fn}, suppose $\phi_i \approx 0.9$, then theoretically $\frac{\mathbf{P}(fn(t_i))}{r} \approx 0.0523$ and $\frac{\mathbf{P}(fn(t_i))}{1 - r} \approx 0.0037$. If $r = mr \in [0.01, 0.02]$, then $\mathbf{P}(fn(t_i)) \in [0.0005, 0.0010]$ and $\mathbf{P}(fp(t_i)) \approx 0.0037$. On the other side, let $tp$ be the true positive rate, then $rec = \frac{tp}{tp + fn}$, $pre = \frac{tp}{tp + fp}$. Reading from the figure, average recall $rec \approx 0.9$, average precision $pre \in [0.7, 0.8]$. Remember $tp + fn = mr$, then we can calculate the in our experiments $fp \in [0.001, 0.002]$ and $fp \in [0.0023, 0.0075]$. Consider the imprecise estimation of $\phi_i$, it is reasonable to claim that the experimental result and theoretical probabilistic analysis match.
-Secondly, with the increase of $mr$, recall falls slightly while precision rises promptly. This matches our theoretical analysis as with a fixed $thres$ and $n$, both $\mathbf{P}(fn(t_i))/r$ and $\mathbf{P}(fp(t_i))/(1-r)$ stay almost the same. Therefore as $r$ increases, $\mathbf{P}(fn(t_i))$ increases while $\mathbf{P}(fp(t_i))$ decreases.
+其次在第四节的理论分析中，我们得出结论当$thres$和$n$保持不变时，$\mathbf{P}(fn(t_i))/r$和$\mathbf{P}(fp(t_i))/(1-r)$均基本保持不变，因此当$r$升高时，$\mathbf{P}(fn(t_i))$上升而$\mathbf{P}(fp(t_i))$下降。实验数据也验证了这一结论，当$mr$升高时，召回率略微下降，但精度显著上升。
 
 
-\subsection{Cure SFL Algorithms}
+\subsection{SFL算法精度恢复}
 
-The second experiment is designed to evaluate how much our algorithm can reduce the extra time consumption caused by test oracle errors during the debugging process. This evaluation is conducted on not only the Siemens Test Suite, but also on \texttt{grep}, a real world program which scales up to over 13,000 lines of code. The results are presented as follows.
+实验二的目的是研究SFL算法的定位精度在使用纠错后的测试准则判断的测试结果时会恢复到怎样的程度。实验用的对象程序包括西门子测试集以及代码规模超过13,000行的程序\texttt{grep}。
 
-\subsubsection{Results on the Siemens Test Suite}
-As a reference, we first applied the four SFL algorithms on each program variants of the Siemens Suites with the erroneous oracle mutants we generated and recorded their performance. Then we performed the oracle debugging process and generated a corresponding ``debugged oracle" for each oracle mutant. Finally we applied the four SFL algorithms with the ``debugged oracles" and compared their performance with the record with the erroneous oracle mutants.
-In consistency with Section \ref{sec: error impact}, time required for debugging is quantified as the score defined by equation \ref{equ: score}. Again the experiment was repeated 5 times. The results are presented in Fig. \ref{fig: perfomance improvement}.
+\subsubsection{西门子测试集上的实验结果}
+作为基准参考，我们首先使用错误的测试准则，统计四种SFL算法在所有西门子测试集中的程序变体上错误定位的精度。接着使用\ref{alg: debugMain}对测试准则纠错。最终重新统计四种SFL算法错误定位的精度，并与之前的精度进行对比。与第\ref{sec: error impact}节中的数据统计方式保持一致，错误定位精度被量化为公式\ref{equ: score}定义的分数（score）。实验重复了5次，实验结果如图\ref{fig: perfomance improvement}所示。
 
-Fig. \ref{fig: mutScore} and \ref{fig: autoScore} compare the performance of four SFL algorithms with the erroneous oracle mutants and the oracles debugged by our algorithm. For a mutate ratio $mr$, a certain score $s_x$, the proportion value $p(mr, s_x)$ in both figures is defined as the proportion of program variants that, with the erroneous oracle at error rate $mr$, can be successfully debugged by checking less than $s_x$ of its code.
-Visually, surfaces in Fig. \ref{fig: autoScore} for all 4 SFL algorithms are clearly ``lifted" from their place in Fig. \ref{fig: mutScore}, demonstrating a remarkable improvement in fault localization accuracy. Typically, under the erroneous oracles, Russel\&Rao achieved score $0$ (hitting the bug at the first line it suggests to be checked) on approximately 20\% program variants, while this number expands to 50\% and even higher for less erroneous oracles. For Ochiai, this rate rose from less than 60\% to over 70\%. Even for Tarantula, the least sensitive algorithm to oracle errors, this rate rose from 25\% to 40\%.
+图\ref{fig: mutScore}和图\ref{fig: autoScore}展示了测试准则纠错前后SFL的精度的对比情况。给定错误率$mr$和分数$s_x$，图中的纵坐标比率（proportion）$p(mr, s_x)$表示当测试准则的错误率为$mr$时，所有错误定位精度高于$s_x$的程序变体在测试集中所占的比例。
 
-For clearer view of the differences between Fig. \ref{fig: autoScore} and Fig. \ref{fig: mutScore}, we plotted two other set of figures demonstrating the absolute (Fig. \ref{fig: mut-absImp}) and relative (Fig. \ref{fig: mut-relImp}) improvement. To be precise, in addition to  $s_0(v_i, \omega_j)$ and $s_r(v_i, \omega_j)$ defined in subsection \ref{subsection: compr result}, we define $s_d(v_i, \omega_j)$ as the score of $\omega_j$ applied to $v_i$ with the debugged oracle. Then the absolute performance improvement of $\omega_j$ for $v_i$ at error rate $r$ is defined as
+直观的看，图\ref{fig: autoScore}中四种算法对应图像的曲面都比图\ref{fig: mutScore}中对应的曲面明显提高，这意味着SFL算法的定位精度也有了明显提升。具体而言，在使用错误的测试准则时，Russel\&Rao在约20\%的程序变体上定位精度分数为$0$（即错误代码行被排在第一位），而当使用纠错后的测试准则时，这一比例扩大到超过50\%。对Ochiai，这一比例从少于60\%扩大到超过70\%。在第三节的实验中，Tarantula表现出较好的容错性，但这一比例从25\%扩大到40\%，说明其定位精度也有了较大的提高。
+
+为了更清晰的观察图\ref{fig: autoScore}和图\ref{fig: mutScore}之间的区别，我们绘制了另外两组图片来展示SFL算法精度的绝对（图\ref{fig: mut-absImp}）和相对（图\ref{fig: mut-relImp})提高。准确起见，除在第\ref{subsection: compr result}小节定义的$s_0(v_i, \omega_j)$和$s_r(v_i, \omega_j)$之外，我们定义$s_d(v_i, \omega_j)$用以表示SFL算法$\omega_j$以纠错后的测试准则判断作为输入应用于程序变体$v_i$达到的定位精度，则算法$\omega_j$在测试准则错误率为$r$应用于$v_i$时精度的绝对提高定义为
 $$
 \Delta_{|\cdot|}^{+}(\omega_j, v_i, r) = s_r(v_i, \omega_j) - s_d(v_i, \omega_j)
 $$
-and the relative improvement is defined as
+相对提高定义为
 $$
 \Delta_{\%}^{+}(\omega_j, v_i, r) = \frac{s_d(v_i, \omega_j) - s_0(v_i, \omega_j)}{s_r(v_i, \omega_j) - s_0(v_i, \omega_j)}
 $$
-For both figures, proportion $p$ relative to a certain improvement value $\Delta_x$ at mutate rate $r$ represents the rate of program variants on which the SFL algorithms achieved greater improvement than $\Delta_x$ using oracles mutated and debugged at mutate rate $r$. As shown in Fig. \ref{fig: mut-absImp}, different algorithms improve at various extent. For Russel\&Rao, approximately 30\% program variants can be successfully debugged by checking 10\% less code. These numbers reflect dramatic reduction in debugging time.
 
-One may notice that there seems to be not much absolute improvement on a majority of program variants. This is because for most of the cases, the faulty line can be localized within 30\% of the total code even with the erroneous oracle mutants, which leaves not much space of absolute improvement. However, as presented in Fig. \ref{fig: mut-relImp}, there is a relative improvement for over 50\% program variants. The most obvious improvement appeared in Russel\&Rao, where accuracy for approximately 50\% program variants improved 50\%.
+在这两张图中，给定$\Delta_x$和测试准则错误率$r$，纵坐标比率$p$的含义是所有在测试准则纠错前后SFL的精度提高超过了$\Delta_x$的测试用例所占比例。如图\ref{fig: mut-absImp}所示，不同算法的精度在不同程度上有所提高。例如，使用算法Russel\&Rao，在约有30\%的程序变体上算法精度提高了10\%，这意味着在实际的“生成-检验”系统实现中，搜索引擎所需检查的代码减少了10\%，搜索效率大大提升。
 
-From Fig. \ref{fig: perfomance improvement}, we conclude that after debugging the test oracles, effectiveness of four subject SFL algorithms recovered remarkably. Since each of these four algorithms are either identified as ``optimal" metrics or widely known, we believe they are representative of the whole SFL family.
+从图\ref{fig:mut-absImp}中的图像来看，似乎在许多程序变体上SFL的精度提高并不明显。这是因为对于大多数程序而言，哪怕是使用错误的测试准则作为输入，SFL的定位精度分值仍然在30\%以下，因此绝对提升的空间有限。但是图\ref{fig: mut-relImp}显示，对超过50\%的程序变体而言精度的相对提升幅度较大，提升最明显的是Russel\&Rao，在超过50\%的程序变体上定位精度的相对提升幅度超过了50\%。
+
+从图\ref{fig: perfomance improvement}中可以看出，SFL算法的定位精度在测试准则经过纠错后有了明显恢复。由于这四种算法都是研究公认的“最优”或应用最广泛的是算法，因此我们认为这一结论可以推广到SFL一族的其他算法上。
 
 
-\subsubsection{Results on \texttt{grep}}
+\subsubsection{\texttt{grep}上的测试结果}
 
-\texttt{grep} is a command-line utility for searching plain-text data sets for lines matching a regular expression widely used on Unix-like systems. SIR\cite{doESE05} provided 5 versions of \texttt{grep}, each containing from 1 to 18 fault seeds and several corresponding test sets. The original test results showed that plenty of the fault seeds could not be detected, thus were excluded in our experiment. Especially, only one fault seed was provided for version 5 but was undetectable, so version 5 was not included. A summary of the usage of \texttt{grep} is presented in Table \ref{Tab: grep-info}.
+\texttt{grep}是类Unix系统中常用的字符串匹配程序，其功能是在文本文件中查找符合某一模式的字符串。SIR\cite{doESE05}提供了\texttt{grep}的5个发布版本，每个版本都包括18个有植入错误的程序变体及其相应的测试集。初步测试显示，很多程序变体中的错误无法被测试集中的测试触发，因此本节实验的程序对象将这部分程序变体移除了。特别的，版本5只有一个程序变体，但其中的错误无法被触发，因此版本5整体被移除了。表\ref{Tab: grep-info}列出了基本发行版本的基本信息。
 
 \begin{table}
-	\caption{Summary of \texttt{grep}} \label{Tab: grep-info}
+	\caption{\texttt{grep}基本信息} \label{Tab: grep-info}
+	\centering
 	\begin{tabular}{c|c|c|c}
-		\hline version & fault seeds & detectable seeds & line of code \\ 
+		\hline 版本号 & 植入错误数 & 可检测的错误数 & 代码行数 \\ 
 		\hline v1 & 18 & 2 & 12654 \\ 
 		\hline v2 & 8 & 1 & 13231 \\ 
 		\hline v3 & 18 & 2 & 13374 \\ 
@@ -438,13 +440,12 @@ From Fig. \ref{fig: perfomance improvement}, we conclude that after debugging th
 	\end{tabular} 
 \end{table}
 
-Following the same scheme as with the Siemens Test Suite, we first generated the correct test oracles for four versions of \texttt{grep} using the corresponding unseeded programs. Then we randomly mutated the test oracles at a mutate rate $mr$ from $0.01$ to $0.1$. For comparison, we recorded the accuracy of the four SFL algorithms applied to the seeded programs using both the mutated oracles and the debugged oracles. The experiment was repeated 5 times. The results are plotted in Fig. 6.%\ref{Fig: grep}.
+与在西门子测试集上的实验设计相同，我们首先利用未植入错误的程序版本为所有程序变体生成了正确的测试准则，接着按概率$mr\in [0.01, 0.1]$随机改变测试准则的输出获取错误的测试准则，最终比较SFL算法在错误的测试准则和纠错后的测试准则上的定位精度。实验重复了5次，图\ref{Fig: grep}展示了实验结果。
 
 
-Fig. 6 %\ref{Fig: grep} 
-presents the evaluation results on four versions of \texttt{grep} using the four SFL algorithms. Since there are only four versions of programs we were able to look closer at the effect of our approach on each program. For each version using the same SFL algorithm, the red line represents the change of accuracy as $mr$ changes from 0.01 to 0.1 with the mutated oracles, while the green line represents the accuracy with the debugged oracles. Obviously, accuracy improved on most of the versions for different SFL algorithms. This is especially prominent with Russel\&Rao. There seems to be no obvious improvement in Ochiai, but accuracy with debugged oracle is at least not worse than with the original oracle.
+图\ref{Fig: grep}展示了在四个版本的\texttt{grep}上SFL的错误定位精度。鉴于总共只有4个版本，我们可以更清晰的看到算法\ref{alg: debugMain}对每个程序的影响。对使用同一SFL算法的每个版本的程序，红线表示当测试准则错误率在$[0.01,0.1]$上变化时定位精度的变化情况，绿线表示使用纠错后的测试准则时的定位精度。在大多数程序变体上，所有SFL算法的定位精度都有所提高。其中变化最显著的是Russel\&Rao，Ochiai的精度虽没有明显提高，但也没有降低。
 
-Another thing worth mentioning is the test sets provided by SIR. For programs in Siemens Test Suite, SIR provided approximately 4000 test cases each. Thus it is natural that we can debug the test oracle taking advantage of the duplicated test cases. However, for \texttt{grep} we adopted the test set which aimed to be \textit{``representative of those that might be created in practice for these programs"}\cite{doESE05}. The test set contains merely 199 test cases, yet we still managed to improve the accuracy of SFL algorithms. This proves that our approach is applicable for realistic programs with realistic test suites.
+值得注意的是，西门子测试集中，每个程序都有约4000个测试用例，因此算法能够很方便的利用测试用例之间的相似性达到较好的召回率和精度。与之对比，SIR为\texttt{grep}提供的测试用例集是\textit{“能够代表实际开发过程中使用的测试用例”}\cite{doESE05}，所包含的测试用例只有199个，实验数据显示算法仍然取得了较好的效果。这说明\ref{alg: debugMain}能够应用于实际程序的真实测试集。
 
 \section{讨论}
 
