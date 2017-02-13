@@ -448,36 +448,32 @@ $$
 值得注意的是，西门子测试集中，每个程序都有约4000个测试用例，因此算法能够很方便的利用测试用例之间的相似性达到较好的召回率和精度。与之对比，SIR为\texttt{grep}提供的测试用例集是\textit{“能够代表实际开发过程中使用的测试用例”}\cite{doESE05}，所包含的测试用例只有199个，实验数据显示算法仍然取得了较好的效果。这说明\ref{alg: debugMain}能够应用于实际程序的真实测试集。
 
 \section{讨论}
+在第\ref{sec: experiments}节的实验二中，我们观察到随着测试准则错误率的上升，SFL算法在纠错后的测试准则上的精度提升有小幅度的下降。这一趋势恰好与召回率随测试准则错误率的变化趋势相同，那么召回率与SFL算法的精度提升幅度之间是否有不通过测试准则错误率的直接关系呢？考虑到Russel\&Rao的精度提升最明显，我们计算了绝对精度提高和相对精度提高在不同召回率上的分布情况，图像如图\ref{fig:rec_abs_relImp}所示。
 
-During the second experiment in Section \ref{sec: experiments}, we observed that as error rate rises, performance improvement of SFL algorithms on the debugged oracles decreases slightly. This trend coincides with the change of recall rate relative to error rate, which leads us to wonder if there is a direct connection between recall rate of the debugged oracles and performance improvement of SFL algorithms irrelevant to the error rate of the input oracles. Since Russel\&Rao showed a more obvious improvement, we calculated the absolute and relative improvement distribution related to ``recall" and the results are presented in Fig. \ref{fig:rec_abs_relImp}.
+在图\ref{fig:rec_abs_relImp}中，我们画出了当绝对（相对）精度提升在$0$和$1$之间取值时，达到不同召回率的程序变体所占的比率。尽管曲面有许多皱褶，我们仍然可以从$x-y$平面的等高线投影上看到精度提升随着召回率的升高而升高的大致趋势。
 
-In Fig. \ref{fig:rec_abs_relImp}, we plotted the proportion of debugged oracles of identical recall rate that achieved absolute or relative improvement values between $0$ and $1$. Despite the layered surface, from the contour projection we are able to recognize the rough tendency that improvement grows along with the increase of recall.
+从这一趋势可以得出的一个直接结论是，与测试准则的错误率无关，一般而言较高的召回率也对应着较大的SFL的精度提高幅度。因此，只要调整算法中的参数获得较好的召回率，本节所提出的方法也能够在测试准则错误率超过$0.1$（本实验中的上限）场景下应用。
 
-A direct conclusion from this tendency is that generally a higher recall rate will lead to better improvement with the debugged oracle regardless of the actual error rate. Therefore, our approach can be applied to scenarios where the error rate is over 0.1 (the upper bound in our experiment), with only adjustment of parameters to achieve a proper recall rate.
-
-Another deduction answers an important question: which kind of error, ``false passes" or ``false fails", impacts SFL algorithms more and needs to be avoided more carefully? This is a meaningful question since early prevention is always cheaper than later correction. Intuitively we covered this issue in Section \ref{sec: introduction} and decided that ``false fails" are worse. But statistical evidence is still required.
-
-For most program variants of the Siemens Test Suite, only around 5\% test cases can expose the error. Consequently the majority of oracle errors are ``false fails" and ``false passes" rarely happen. At a high recall rate, almost all errors in the oracle mutant would be corrected, which dramatically reduces the ratio of ``false fails" while ``false passes" are less influenced. As a result, ``recall" can actually be used as an indicator for error composition of the debugged oracle, that is, a higher recall usually means less ``false fails" whereas more ``false passes". As the tendency shown in Fig. \ref{fig:rec_abs_relImp}, less ``false fails" relates to more obvious performance improvement. Therefore, seen from the other side ``false fails" do impact more than ``false passes" and should be especially prevented in the initial creation of test oracles.
+%TODO:??
+此外，我们还可以推断出测试准则的哪一类错误，即“假通过”或“假失败”，对SFL算法的精度影响更大？这一问题的重要性在于，在实际的软件开发过程中，尽量避免测试准则错误总是比使用SFL定位错误更加经济。分析实验数据我们发现，对于西门子测试中的绝大多数程序变体，大约有5\%的测试用例能够触发程序中的错误，这导致大多数的测试准则错误是“假失败”，而“假通过”很少发生。当召回率较高时，几乎所有的测试准则错误都会被纠正过来，这大幅减少了“假失败”的数量，但对“假成功”影响较小。这样一来，召回率实际上可以被当做纠错后的测试准则其中所包含的错误类型分布的观察指标，即较高的召回率通常意味着较少的“假失败”和较多的“假成功”。由图\ref{fig:rec_abs_relImp}中的趋势可以看出，较少的“假失败”也和更明显的SFL定位精度提高同时出现。因此我们可以得出结论，“假失败”的确对SFL定位精度的影响更严重，在实际开发过程中应当尤其注意避免。
 
 
 
 %\section{Threats to Validity}
 
-Similar to existing work, empirical studies on SFL algorithms are all subject to validity problems. Referring to \cite{Steimann:2013:TVV:2483760.2483767}, we summarize the potential threats to validity of our work as follows.
+本章中第三节与第五节中的实验均属于经验研究，其结论的正确性可能收到多种因素的影响。我们参考\cite{Steimann:2013:TVV:2483760.2483767}中总结出的几个方面作如下分析。
 
-First is the representativeness of the subject programs. In our empirical study in Section \ref{sec: error impact}, the subject programs are the Siemens Test Suites. One issue is that the size of the Siemens programs is rather small, therefore the conclusions may not fully reflect the exact impact of oracle errors on large scale programs. But this does not impede us from confirming the negative influence of oracle errors. In Section \ref{sec: experiments}, we adopted \texttt{grep}, a widely used real world program scaling up to 13,000 lines of code as a subject program and proved that the fault localization accuracy improved with debugged test oracles in Section \ref{sec: experiments}. Therefore we believe that our approach is scalable and applicable to real world programs.
+第一个因素是被研究程序对象是否具有代表性。在第\ref{sec: error impact}节的实验研究中，研究对象是西门子测试集。西门子测试集的一个问题是其中包含的被测程序的规模都比较小，因此实验得出的结论可能无法完全准确的反映测试准则错误对大型程序的影响。但是这并不影响我们得出的测试准则错误会对错误定位精度产生影响这一结论。在第\ref{sec: experiments}节，我们使用超过13,000行代码的真实程序\texttt{grep}作为研究对象，并在第\ref{sec: experiments}节证明错误定位准确度由于修正了测试准则而提高，由此我们认为本章所提出的算法可以应用于一般规模的真实程序。
 
-The second issue is that all faulty variants are single-faulted, while in real world multi-faults are common. Fortunately as we have pointed out in subsection \ref{subsection: compr result}, many of the faults in fact influence a great proportion of the program and may even mimic multiple faults. For example, a wrongly defined constant value in  ``\#define" would map to wrong values scattering all over the program. We kept these kind of errors intentionally to ameliorate the bias between our experiment and real world case.
+第二个因素被研究程序的错误种类是否全面，即是否同时考虑了单一错误及多种错误两种情况。本章中的实验对象均是单一错误对象，但是在第\ref{subsection: compr result}小节的分析中我们指出，许多单一错误对程序的实际影响可以模拟多处错误，例如一个错误的常量定义可能导致程序中所有使用这一常量的地方都是错误的。实验中我们也刻意保留了这些错误，使实验结果能够更贴近实际应用。
 
-The third issue is the sample size, or the number of subject programs. \cite{Steimann:2013:TVV:2483760.2483767} states that to reach stable results at least 300 subject programs with errors are required. Therefore we repeated our experiments 5 times to smooth away the randomness.
+第三个因素是采样规模，即被研究程序对象的数量。\cite{Steimann:2013:TVV:2483760.2483767}中强调需要至少300个被测程序实验的统计结果才能稳定，因此我们进行了5次重复实验来减少实验结果的随机性。
 
-Another factor mentioned in \cite{Steimann:2013:TVV:2483760.2483767} is the quality of the test suites, including size and coverage. Siemens Test Suite provides ample test cases for each variant and achieves satisfactory test coverage. Test suite for \texttt{grep} contains only 199 test cases but was designed to be \textit{``representative of the those that might be created in practice for these programs"}\cite{doESE05}. Therefore we believe that quality of test suites in our experiment is sufficient to come to stable and convincing conclusions.
-
+最后\cite{Steimann:2013:TVV:2483760.2483767}中提到的一个因素是测试集的质量，即测试集的规模和覆盖率。西门子测试集为每个被测程序都提供了充足的测试用例，测试集的覆盖率也足够好。程序\texttt{grep}只包含了199个测试用例，但由于我们希望实验结果能够“代表实际开发过程中的程序”，\cite{doESE05}，因此没有对测试集作进一步的扩充。综合两种类型的测试集，我们认为本章的实验结果能够充分支持实验结论。
 
 
 \section{本章小结}
 
-In this paper, we first proposed the problem of test oracle errors' impact on debugging process. To verify this impact, we conducted experiments on the Siemens Test Suites and tested the performance of four Spectrum-based Fault Localization algorithms using randomly mutated erroneous test oracles. Compared with when using the correct test oracles, fault localization accuracy is remarkably compromised. Therefore it is necessary to debug the test oracle before it is used to debug the program.
+在本章中，我们首先提出测试准则错误会对“生成-检验”系统中的第一步“错误定位”造成负面影响。为了确认这一影响，我们在西门子测试集上进行试验，测试SFL算法的定位精度受测试准则错误的影响。与使用完全正确的测试准则相比，实验数据使用有错的测试准则会使得不同的SFL算法的定位精度有不同程度的下降。因此得出结论，应在错误定位这一环节前修正测试准则错误。
 
-Based on a simple observation that test cases covering similar lines of code usually pass or fail simultaneously, we proposed to measure the similarity between test cases using coverage information and identify the unusually judged test cases from their neighbours. As demonstrated by later experiments, these test cases proved to be mostly wrongly judged by the erroneous test oracle. We further compared the accuracy of four SFL algorithms on both the Siemens Test Suites and \texttt{grep} using the debugged oracle with using the erroneous oracle mutants. Experimental results show that fault localization ability of all four SFL algorithms recovered in different degrees. Finally, we analysed the experiment data and concluded that our approach is applicable to oracles unlimited to an upper bound of error rate. In all, we proposed a simple but effective method to promote the quality of existing erroneous test oracles.
-
+基于一个简单的假设，即“覆盖相似代码行的测试用例通常同时通过或不通过”，我们提出了基于代码行覆盖情况度量测试用例间相似度的方法，并在此基础上提出利用邻居测试用例投票估计测试准则对测试结果的判断出错的可疑程度，并将可疑程度超过某一阈值的测试准则判断翻转，作为测试准则纠错的结果。实验显示，这一算法能够识别出大多数的测试准则判断错误。更进一步的，我们在西门子测试集和\texttt{grep}上比较了4种SFL算法在使用纠错前和纠错后的测试准则判断时的定位精度。实验结果显示，4中SFL算法的定位精度均有恢复。最后，通过对实验数据的进一步分析，我们得出结论，本章算法可以适用于测试准则的错误率超过实验中所设的上限$0.1$的情况。

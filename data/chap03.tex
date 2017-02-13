@@ -5,40 +5,231 @@
 }
 
 \section{引言}%2
-介绍搜索引擎在“生成-检验”系统中的功能、作用，基本设计思想、技术路线和存在问题。
-\section{相关工作}%4
-重点介绍GenProg，Par，SPR，SemFix，DirectFix，Prophet，NOPOL等较完整的系统。
-\section{“预过滤”优化技术}%6
-介绍“预过滤”的基本思想，详细介绍具体算法，讨论其理论上的优势与实际应用中的局限性。
-\section{实验结果及分析}%7
-“预过滤”策略对搜索空间的压缩作用：将其与SPR、NOPOL的压缩效果进行比较分析。
-\section{本章小结}%1
+在“生成-检验”系统中，搜索引擎负责生成程序变体，最终将其交由检验模块来验证该变体是否能够通过测试集。在搜索引擎模块的设计中，搜索空间的规划以及搜索算法直接影响系统整体的修复正确率和运行速度。采取一个广大的搜索空间可以提高系统的修复正确率，但是也意味着需要搜查的范围扩大，系统运行速度降低。因此，提高搜索算法的效率可以使得系统在可接受的时间范围内能够搜索到的空间更大，使得提高修复正确率成为可能。
 
-\section{Introduction}
-Debugging has long been recognized as one of the most time- and labour- costing activity in software engineering practice. To accelerate debugging process, recently a series of ``generate-and-validate" systems are proposed to generate fix suggestions to programmers so that a buggy program can pass a certain test suite.
-However, two major drawbacks prevents existing systems from practical usage. First, most systems generate program mutations that include only one location of changes in the program. As a result, bugs that require fixes at multi-location, which widely exists in real coding practice, can never be fixed. Second, reported experimental results show that the fix generation time can be too long that programmers may take less time fixing the bug manually.
+现有系统的搜索算法可以分为两大类。第一类是基于构造或程序综合方法精准的生成程序变体。算法首先确定程序变体的基本结构，如需要替换表达式的具体位置和语法类型，接着利用静态分析、符号执行等技术，结合“程序变体需通过测试集中的所有测试”这一要求，生成逻辑公式描述替换表达式所应满足的语义要求，最后构造或利用程序综合技术直接生成满足要求的表达式。这一方法的优点在于“精确”，即理论上最终生成的表达式一定是满足逻辑公式要求的，因此将其替换进程序所生成的程序变体应直接通过测试集，几乎不需要再经过检验模块的验证。然而实际系统实现时我们会发现，生成逻辑公式这一过程非常耗时，因此将该算法应用于大规模程序有一定的难度。
 
-In this paper, we propose \SmartDebug, an interactive Java debug assistant that implements a generate-and-validate system while aiming to overcome these two drawbacks. More than existing systems, it utilizes programmers' judgment of program running state by taking in ``Checkpoints", a user-interface we provide for recording programmers' expectations of program running at arbitrary execution positions, so that complicated debug tasks can be split into small fragment of tasks that are solvable separately yet automatically. Therefore \SmartDebug is able to work with bugs that require modifications on several locations to be fixed. \SmartDebug presented in this paper is an upgraded system of our previous work \cite{Guo:2016:SID:2950290.2983971}. It implements our newly proposed optimization strategy called ``early filtration", which filter out mutations that are impossible to fix the program before they enter into the validation phase, so that the search space is dramatically reduced and generation process correspondingly accelerated.
+另一类搜索算法基于预定义的修改模板生成程序变体。搜索算法首先在引擎内部预设了一组修改模板，用于描述在某些代码上下文中可能出现的错误情形以及相应的程序变体生成方法。例如，模板空指针检查器（Null-Checker）用以消除空指针错误，其内容是在某个指针的解引用前（上下文），插入一个判断指针是否为空的检查语句（变体生成方法）。依照这些模板，搜索算法能够针对不同的程序上下文生成合理的程序变体。因此，模板设置的合理性对系统的正确性和搜索的效率起到了决定性的作用。当模板能够覆盖的错误情形较多时，搜索算法能够覆盖到的程序变体范围也比较广，系统的修复正确率也可能有所提高。但若模板类型过多，搜索算法则依照许多并不常见的修改方式生成程序变体，而最终检验模块将耗费大量时间运行和抛弃这些程序变体，如此系统的整体效率也会降低。
 
-\SmartDebug is implemented as an Eclipse plug-in integrated with the JDT debugger. For evaluation, we first run \SmartDebug against Defects4J to inspect the effectiveness of ``early filtration". Experimental results show that \SmartDebug is able to fix 24 versions, the largest amount ever reported on this benchmark. With early filtration, the mutations that enter into validation phase reduced to less than 10\% on 12 versions, and 20\% on 8 more versions. To prove that \SmartDebug is able to actually speed up the debugging process, we also evaluate the plug-in on 25 real bugs that appeared during the development process of programing exam. Results show that \SmartDebug is able to accelerate the debugging process on 7 bugs.
+近年MIT实验室??出现的系统SPR提出了结合以上两种方法的搜索算法“分阶段的程序修复（Staged Program Repair，简称SPR）”。借鉴基于修改模板的搜索引擎，SPR首先预定了能够覆盖其他系统搜索空间的一组修改模板，接着在依照与If条件相关程序变体时，对If条件中的布尔表达式执行SPR算法。算法的基本思想是，首先通过尝试给出某一布尔值序列，使得目标布尔表达式在每次求值时若依照这一序列取值则程序能够通过测试集。接着在程序执行过程中，计算目标表达式所处的程序环境下其他合法布尔表达式的取值情况，若有与该序列相符的布尔表达式则可用它替换目标表达式。由于SPR只生成一种布尔值序列，因此在所有合法的布尔表达式集合中只有非常少的一部分能够符合要求，因此实际被生成出来的程序变体数目也极少，事实上在实验中SPR报告有超过90??的布尔表达式在第二步时被丢弃，这导致最终检验模块需要处理的程序变体较以往系统大大减少。
 
-Structure of the paper is organized as follows. Background and related work are discussed in Section II. In Section III we explain the design and the two features of \SmartDebug. Implementation details are presented in Section IV while evaluation results are reported in Section V. Finally Section VI concludes the paper.
+从实验效果来看，SPR是目前最好的搜索算法，但它仍有一定的局限性。SPR算法对搜索空间的压缩是通过减少If条件中的布尔表达式的搜索空间完成的，但是对更一般的表达式的搜索空间没有起作用。事实上，在SPR系统采用的修复模板中，仍有许多条是直接与一般表达式相关的，因此若能够将一般表达式的搜索空间以相似的方式进行压缩，则SPR的搜索效率会进一步提高。然而，在SPR框架下，这一压缩方式无法扩展到一般表达式上。这是因为SPR的第一步需生成目标表达式的取值序列，然而对于一般表达式，其可能的取值远不止\texttt{true}或\texttt{false}两种，生成一个确定的取值序列是不现实的。
+
+针对这一问题，本章提出一种新的搜索空间压缩算法，称为“预过滤（pre-filter）”策略。算法的基本思想是利用不同测试用例的执行过程生成对替换表达式的约束条件。具体而言，由于能够成功修复错误的程序变体必须保证原本已经通过的测试用例仍然能够通过，因此替换表达式在已通过的测试用例中的取值应与目标表达式一致。而另一方面，程序变体在未通过的测试用例上的执行过程应与原程序不同，因此替换表达式在未通过的测试用例上的取值应与目标表达式不同。利用这一约束，算法在每次程序对目标表达式求值的同时也对搜索空间中的替换表达式求值，并将不符合约束的目标表达式滤除。这一过程发生在生成程序变体之前，因此称为“预过滤”。
+
+预过滤方法对目标表达式的语法类型没有严格限制。它能够兼容SPR算法针对的布尔类型表达式，也能够扩展到其他基本类型以及面向对象语言（如Java）中的对象类型。在本章中，我们实现了一个针对Java程序的“生成-检验”系统，并将预过滤方法实现在搜索引擎中。我们在defect4J测试集上进行了实验，结果表明，预过滤技术可以将一般类型表达式的搜索空间压缩90\%左右。这也使得系统可以负担较宽泛的搜索空间，最终系统能够成功修复其中的24个错误，这是目前在该测试集上报告的最好成绩。
+
+本章的主要贡献如下：
+\begin{itemize}
+	\item 提出预过滤搜索算法思想，并给出在常用修复模板上该算法的实现方法
+	\item 实现了一个完整的“生成-检验”系统PFDebug，完成预过滤算法的具体实现，并在defects4J测试集上进行实验，给出预过滤算法对搜索空间的压缩效果的量化分析
+	\item 将预过滤算法与SPR、Nopol等系统的搜索空间进行对比分析，提出优缺点，并给出可能的改进方向
+\end{itemize}
+
+\section{相关工作}%3
+
+搜索引擎的设计是“生成-检验”系统设计的核心问题，现有研究工作可分为三个部分。其一是搜索空间的设计，包括搜索空间的组织结构及覆盖范围。而是搜索算法的设计，即给定搜索空间后如何高效搜索。三是对已有系统搜索空间的分析，即分析比较搜索空间不同实现对系统整体修复正确率和效率的影响。
+
+\subsection{搜索空间设计}
+针对搜索空间设计的研究主要目标是划定搜索空间的合理范围，使得被覆盖的程序变体能够有更大的可能成为正确的修复方案。例如，在\cite{pan2009toward}中，作者分析了7个大型Java开源项目代码库，将其中与“修正错误”“补丁”等相关的代码提交会话找出，在抽象语法树（Abstract Syntax Tree，简称AST）层面上分析这些会话中前后两个版本代码之间的差异，并总结出9大类常见代码修改方式。在\cite{martinez2015mining}中，作者借助代码比较工具ChangeDistiller\cite{changedistiller:4339230}分析了14个开源Java项目，并统计了在所有“修复回话（fix-commits）”中ChangeDistiller所定义的修改类型（Change Type）及修改实体类型（Change Type Entity Type）所占的比例。作者得出结论，不同修改类型所占的比例在不同项目中不一致，因此搜索引擎内部预置一个概率模型指导搜索过程在某些程序上会导致搜索速度降低。无论怎样，以上两篇文章均认为搜索引擎可以依照有限的模式生成程序变体，使得修复系统能够覆盖一定比例的常见修复方案。
+
+\subsection{搜索算法设计}
+
+搜索算法设计的研究工作较多，我们按照设计思想和发展关系将其分为以下几组分别介绍：
+
+\textbf{GenProg，RSRepair，AE，Kali：}
+这一组算法的设计思想都是“搜索框架+程序变换”。GenProg\cite{6035728}\cite{6227211}最早提出了使用遗传算法搜索框架+程序变换的方式解决错误修复问题。作者认为，对程序中的一段错误代码，通常可以在程序的其他位置找到能够将其替换和修复的正确代码。基于这一观察，GenProg在对象程序源代码中剪切粘贴代码片段生成程序变体，将其作为“种群”，以程序变体所能通过的测试数目作为评价函数，交由遗传算法框架进行搜索。其优点是搜索空间较大，对错误类型也无限制。而缺点是搜索方向难以控制，搜索时间也比较长。在此基础上，文章\cite{Qi:2014:SRS:2568225.2568254}实现了系统RSRepair，并指出在实验过程中发现，采用随机搜索算法能够达到的修复成功率与GenProg接近，且系统运行时间短效率高。AE\cite{6693094}舍弃了随机化搜索框架，它首先固定了程序变体的生成方式，接着提出一种将语义等价但语法不等价的程序变体归为一个等价类，最终以程序（或程序变体）所需执行的测试数目为指标定义了适应函数套用适应性搜索算法。文章中报告的实验结论认为该算法的效果由于GenProg。但另一篇文章\cite{qi2015analysis}认为，以上三种算法生成的程序补丁实际上没有修好错误，而是“移除了功能”系统功能。为了证实这一说法，作者开发了“功能移除系统Kali，该系统仅移除代码而不生成新代码。实验表明，Kali的“修复”效果不弱于前几个系统，因此这些算法的有效性有待考察。
+
+\textbf{Par:}
+\cite{kim2013automatic}最早提出了基于修改模板的搜索算法。作者首先分析了60,000余个开源代码库中的代码补丁，并得出结论约有30\%的错误可以被8中修改模式覆盖。在此基础上，作者实现了系统Par，并在119个真实错误上进行实验，成功修复了其中的27个错误。另外，作者认为由分析开发人员提交的代码补丁分析出的修改模板所生成的修改方案更容易被开发人员理解。为证实这一结论，作者邀请了学生与专业开发人员分别评价Par和GenProg生成的补丁，文章称评价人员认为Par生成的补丁更易被理解。Par系统的优点是模板简单，生成较快，而缺点是模板覆盖的搜索空间有限，修复正确率也比较低。在\cite{qi2015analysis}中，作者也认为Par系统的实验数据有误，但并没有得到Par作者的回应。因此我们无法判断Par真正的修复正确率是多少。
+
+\textbf{“天使调试”（Angellic Debugging）和 NOPOL:}
+天使调试（Angellic debugging）是在\cite{chandra2011angelic}中首次提出。其思想是，在测试执行过程中将目标表达式替换为符号表达式，执行符号分析，获取为使程序能够通过测试集中的所有测试的符号条件。如果存在符号变量的某一具体取值能够使得符号条件满足，则目标表达式是一个待选的修复位置。天使调试的输出结果是一列可能的修复位置而不是最终的修复方案。NOPOL\cite{demarco2014automatic}借鉴了天使调试的思想。NOPOL只能修复错误的If条件表达式，首先它在测试运行过程中动态的修改条件表达式的取值，找到能使程序通过测试集的布尔值，即替换表达式应满足的取值条件。接着，它分析在目标表达式位置上的合法布尔表达式，用逻辑公式描述其语义并利用程序综合方法生成满足条件的替换表达式。NOPOL的优点是，其生成的布尔表达式结构可以比较复杂，但缺点是无法顾及其他可能的错误情况，且对目标表达式构成元素的逻辑分析也受符号执行器的能力限制。
+
+\textbf{SemFix and DirectFix:}
+SemFix\cite{nguyen2013semfix}是第一个使用符号执行技术生成目标表达式约束的完整系统。与天使调试类似，SemFix用符号变量替换目标表达式，接着对通过和不通过的测试用例执行过程分别做符号分析，根据测试准则的要求生成符号变量需要满足的条件。最后利用程序综合技术利用某一范围内的构造元素（如变量、函数等）生成符合要求的替换表达式。该算法的优点是生成的替换表达式精确地符合测试集的要求，节省检验器的验证时间，而缺点是受限于现有符号执行器的处理能力，算法很难应用于较大规模的程序。此外，算法仅能生成替换单一表达式的修复方案，更复杂的情况将无法处理。在SemFix基础上，同一研究组发表了系统DirectFix\cite{mechtaev2015directfix}。DirectFix的目标是生成更简单的修复方案，算法的思路是将目标表达式的位置与替换表达式应满足的条件全部用逻辑公式描述，并将其交给MaxSAT求解器进行求解。由于MaxSAT求解的结果通常比较简练，因此最终生成的替换方案也比较简单易懂。
+
+
+\textbf{SPR and Prophet:}
+SPR系统\cite{Long:2015:SPR:2786805.2786811}由MIT人工智能实验室提出，其搜索引擎内部定义了一组修复模板，其搜索空间覆盖了Par、GenProg、AE等系统的搜索空间。同时，它针对其中与If条件布尔表达式相关的修复模板提出了分阶段修复算法（Staged Program Repair，简称SPR）。SPR的基本思路是，在测试运行过程中动态调整目标布尔表达式每次的取值，最终获取一个能够使不通过的测试用例通过的取值序列。接着SPR记录目标表达式位置处的合法表达式的取值情况，挑出符合该取值序列的目标表达式，将其填入模板的对应位置。实验显示，经过取值序列的过滤，约有90\%??的修复方案可以被滤除，大大压缩了搜索空间。在SPR基础上，Prophet\cite{long2016automatic}提出了一种对修复方案排序的算法，该算法主要应用于检验阶段，因此不在本章做详细介绍。
+
+
+\subsection{搜索空间分析}
+
+在\cite{spr_searchspace}中，作者在SPR和Prophet系统的基础上使用搜索空间的不同配置在同一组对象程序上实验，并观察不同配置下搜索空间的变化与系统整体修复成功率和运行速度之间的关系。文章得出了两个主要结论。第一，搜索空间中正确的修复方案非常稀疏，而能够使测试集通过但事实上并不正确的修复方式却相对密集许多，因此利用测试集之外的知识进一步筛选修复方案非常重要。第二，盲目扩张搜索空间并不一定会带来修复正确率的提升，事实上在给定某一时间上限时，扩张搜索空间会导致错误的修复方案增多，在搜索到正确修复方案之前所花费的时间也增多。
+
+\section{“预过滤”算法}%4
+
+根据现有研究工作的进展情况，本文认为SPR将预定义的修复模板与搜索技术相结合的技术是“生成-检验”系统搜索引擎较好的设计方法。但由于其空间压缩算法的应用对象只能是If的布尔条件，SPR的搜索算法仍有缺陷。本节我们提出一种新的搜索空间压缩办法，称为“预过滤”算法。该算法的应用对象能够从布尔表达式相关的修复模板扩展为一般表达式相关的修复模板，弥补了SPR算法的不足之处。
+
+\subsection{算法概述}
+“预过滤”算法的基本思路是利用测试集中已通过和未通过的测试用例的执行过程压缩替换表达式的搜索空间。具体而言，对于一个涉及替换表达式的修复模板，若生成的修复方案中将目标表达式$A$替换为表达式$B$，我们有以下观察：
+\begin{itemize}
+	\item 为保证替换后的程序在已通过的测试用例上应仍能够保持通过，$B$应在每次对$A$求值时与$A$的值保持一致
+	\item 为保证替换后的程序能够在未通过的测试用例上通过，$B$在所有对$A$求值的上下文中应至少有一次与$A$的值不相同
+\end{itemize}
+
+利用以上观察，在将$A$替换为$B$并经过检验器验证之前，搜索引擎可以判断该替换是否可能修正程序的错误并滤除不符合条件的替换表达式。这一过滤算法称为“预过滤”算法，我们用以下例程说明“预过滤”的基本思路。
+\begin{lstlisting}[caption=错误示例 jfreechart-11/ShapeUtilities.java,frame=single,language=Java,numbers=left,basicstyle=\ttfamily\footnotesize,label={code:jfreechart11}]
+public static boolean equal(GeneralPath p1,GeneralPath p2){
+  if (p1 == null) {
+    return (p2 == null);
+  }
+  if (p2 == null) {
+    return false;
+  }
+  if (p1.getWindingRule() != p2.getWindingRule()) {
+    return false;
+  }
+  PathIterator iterator1 = p1.getPathIterator(null);
+  //ERROR: 下句p1应为p2
+  PathIterator iterator2 = p1.getPathIterator(null);
+  double[] d1 = new double[6];
+  double[] d2 = new double[6];
+  boolean done = iterator1.isDone() && iterator2.isDone();
+  while (!done) {
+    if (iterator1.isDone() != iterator2.isDone()) {
+      return false;
+    }
+    int seg1 = iterator1.currentSegment(d1);
+    int seg2 = iterator2.currentSegment(d2);
+    if (seg1 != seg2) {
+      return false;
+    }
+    if (!Arrays.equals(d1, d2)) {
+      return false;
+    }
+    iterator1.next();
+    iterator2.next();
+    done = iterator1.isDone() && iterator2.isDone();
+  }
+  return true;
+}
+\end{lstlisting}
+
+代码\ref{code:jfreechart11}来自defects4J\cite{Just:2014:DDE:2610384.2628055}测试集中程序JFreeChart的一个错误版本。代码展示了一个计算两个路径\texttt{GeneralPath}对象是否相同的静态方法，其算法思路如下：首先判断两个输入对象是否为空值（2-7行），接着比较两个对象的\texttt{windingRule}属性是否一致（8-10行），最后比较两个路径对象（\texttt{p1}，\texttt{p2}）包含的实际数据是否一致（11-33行）。在最后一步中，代码首先构造了两个内部数据访问迭代器（11-13行），接着利用迭代器逐段比较两个路径是否一致（17-32行）。代码中的错误是，在13行构造路径\texttt{p2}的迭代器时应调用\texttt{p2}的方法而实际上调用了\texttt{p1}，这导致两个迭代器实际上都是在同一个路径对象\texttt{p1}上遍历，因此只要方法输入参数不为空，返回值永远是\texttt{true}。
+
+方法\texttt{equals}被测试集中的两个测试用例所覆盖，分别是\texttt{ShapeUtilitiesTest.java}中的\texttt{testEqualShapes}和\texttt{testGeneralEqualPaths}。在测试执行过程中，\texttt{testEqualShapes}通过了，但\texttt{testGeneralEqualPaths}没有通过，其原因是\texttt{testEqualShapes}中只测试了两条路径相同的情况，因此\texttt{equals}方法的返回值永远是正确的，而\texttt{testGeneralEqualPaths}则覆盖了两条路径不相同的情况，因此错误被触发。
+
+对“生成-检验”系统的搜索引擎来讲，当已经把错误定位到13行时，会为表达式\texttt{p1}生成一系列替换表达式。在此处的合法表达式有\texttt{p2}，及\texttt{new GeneralPath()}等等。我们以这两个表达式为例说明“预过滤”算法如何利用前述观察滤除不合理的替换表达式。首先，由于\texttt{testEqualShapes}调用该方法是输入的路径都是相等的，\texttt{p1 -> new GeneralPath()}不能使已通过的\texttt{testEqualShapes}方法通过但\texttt{p1 -> p2}可以，因此应首先将\texttt{new GeneralPath()}这一表达式从替换表达式中剔除。另外对于未通过的测试用例\texttt{testGeneralEqualPaths}，修改后的程序执行过程中迭代器\texttt{iterator2}应当发生改变，因此\texttt{p2}应当被保留。此时，经过预过滤处理，\texttt{new GeneralPath()}被过滤掉，而\texttt{p2}被保留。
 
 
 
-\section{Background and Related Work}
-``Generate-and-validate" systems are proposed as a solution to automatic general bug fixing. They generate possible fixes on the source code that makes the program under test pass a certain test suite. As the name suggests, they first generate a series of program mutations as fix candidates, then apply them to the program , and finally rerun the tests for validation. Major differences between existing systems reside in the ``generate" process, and we cluster them as follows.
+\begin{algorithm}
+	\caption{预过滤算法（filter）}
+	\label{alg: pre-filter}
+	\begin{algorithmic}
+		\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+		\renewcommand\algorithmicensure {\textbf{Output:} }
+		\REQUIRE $P$, $T_c$, $T_f$, $n$, $E_{in}, e_t$
+		\ENSURE $E_{out}$
+		\STATE {hitcount = 0;}
+		\FOR {each $t_i \in T_c$}
+			\WHILE {(hitcount < $n$)}
+				\STATE {hitcount ++;}
+				\FOR {each $e_r \in E_{in}$ }
+					\IF {($!Equal(eval(e_r), eval(e_t))$)}
+						\STATE {Remove($E_{in}, e_r$)};
+					\ENDIF
+				\ENDFOR
+			\ENDWHILE
+		\ENDFOR
+		
+		\STATE {init($E_{out}$)}
+		\STATE {hitcount = 0;}
+		\FOR {each $t_i \in T_f$}
+			\WHILE {(hitcount < $n$)}
+				\STATE {hitcount ++;}
+				\FOR {each $e_r \in E_{in}$ }
+					\IF {($!Equal(eval(e_r), eval(e_t))$)}
+						\STATE {update($E_{out}, e_r$);}
+					\ENDIF
+				\ENDFOR
+			\ENDWHILE
+		\ENDFOR
+		
+		\RETURN $E_{out}$;
+		
+	\end{algorithmic}
+\end{algorithm}
 
-\textbf{GenProg, RSRepair, AE and Kali:}
-GenProg\cite{6035728}\cite{6227211} performs genetic search to generate fixes that are composed of code ingredients from the software system itself. RSRepair\cite{Qi:2014:SRS:2568225.2568254} adopts a random search algorithm instead. AE\cite{6693094} deterministically searches for patches and utilizes program equivalence to prune the search space. However analysis in \cite{qi2015analysis} show that most of the patches generated by these systems actually removes program features rather than corrects bugs. To prove this analysis, Kali\cite{qi2015analysis} is designed as a function remover and the experiments show that Kali works just as well. Therefore it remains a question whether these systems can actually work on real software bugs.
 
-\textbf{Par:}In \cite{kim2013automatic}, the authors summarized 9 common fix patterns by analyzing fix patterns in open-source software repositories, and used them as templates to generate fixes. The authors claim that the patches generated by Par are more acceptable by developers than GenProg.
+\begin{algorithm}
+	\caption{搜索框架}
+	\label{alg: search-frame}
+	\begin{algorithmic}
+		\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+		\renewcommand\algorithmicensure {\textbf{Output:} }
+		\REQUIRE $P$, $T_c$, $T_f$, $n$, $E_{in}, L, S$
+		\ENSURE $M$
+		\FOR {each $l \in L$}
+			\FOR {each $s \in S$}
+			\STATE {$M_l = gen(l, s)$}
+			\ENDFOR
+			\FOR {each $m \in M_l$}
+			\STATE {$M_f$ = filter($P$, $T_c$, $T_f$, $n$, $E_{in}$,$m.e_r$, $l.e_t$)}
+			\ENDFOR
+			\STATE Add($M$, $M_f$)
+		\ENDFOR
+		\RETURN $M$;
+		
+	\end{algorithmic}
+\end{algorithm}
+介绍“预过滤”的基本思想0.5
 
-\textbf{Angelic Debugging, NOPOL, SemFix and DirectFix:} Angelic debugging\cite{chandra2011angelic} replaces expressions with an angelic variable-a variable that takes an arbitrary value-and see if the program can successfully pass the tests. NOPOL\cite{demarco2014automatic} narrows the target expression in \cite{chandra2011angelic} to condition expressions in Java. If such expression exists, a replacement expression is synthesized with an SMT solver. SemFix\cite{nguyen2013semfix} uses symbolic execution to calculate the constraints that an replacement expression must satisfy for a potential buggy expression. It then uses an SMT-solver to synthesize such expression. DirectFix\cite{mechtaev2015directfix} improves SemFix as it fuses the fault localization and repair generation into one step by utilizing MaxSAT constraint solving and program synthesis to generate the simplest expression modifications.
+a. 表达式修改相关
 
-\textbf{SPR and Prophet:} SPR, short for staged program repair\cite{Long:2015:SPR:2786805.2786811}, first generates possible sequences of the value of a target condition expression such that the failed test may take a correct execution route, then synthesizes such condition expression. \cite{long2016automatic} sorts the prioritizes fixes by their probability of being the correct fix.
+详细介绍具体算法（伪代码）0.5
 
-\SmartDebug differs from existing systems as it allows user annotation and specification of program execution, so that multi-site fixes are handled naturally. Also, the ``early-filtration" technique is proposed and applied exclusively by us to sharply reduce the candidate fixes going into the validation process and speeds up the process dramatically. Most importantly, \SmartDebug is a usable demo integrated in a widely used IDE, which can indeed improve debug efficiency for programmers.
+算法1：过滤算法，包括如何判定某一表达式是否通过过滤
+算法解释0.5
+
+更进一步，压缩算法1
+算法2：空间压缩算法，包括如何将几个表达式合并为同一等价类
+
+理论上的优势
+
+The huge search space has always been an obstacle in developing efficient generate-and-validate systems. ``Early filtration", by the name, means to filter impossible fix candidates early in the generate phase, so that they do not flow to the validate phase, which leads to a dramatic compression of the search space and improves efficiency sharply. Unlike SPR\cite{Long:2015:SPR:2786805.2786811}, ``early filtration" works on fixes that modifies expressions, or that contains modifications of expressions, thus are not limited to only condition expression.
+
+``Early filtration" is proposed based on the observation that if an expression A is to be replaced with an expression B, then:
+\begin{itemize}	
+	\item{In order to ensure that all the passed tests remain passed, B should be ``equal" to A at each time the program runs to the position where A is evaluated.}
+	\item{In order to correct the failed tests, B should NOT be ``equal" to A in at least one time when A is evaluated.}
+\end{itemize}
+
+
+判断两个表达式等价的标准：
+在hotstack上对表达式求值，分为以下几种情况：
+1.基本类型：
+2.字符类型：
+3.数组类型：
+4.一般对象：
+
+Note that the criteria of ``equality" is critical in applying this observation. Equality between primitive values is straight forward. For non-primitive objects, equality is defined as the equality of all primitive-typed fields of the object.
+
+
+系统所应用的修复pattern如何应用这一技术
+For fix pattern 1, this observation can be applied directly. For fix patterns 2-6, the modified or newly introduced branch condition should be seen as expression A in the above observation.
+
+
+算法细化需要考虑的问题：
+如何判断表达式是否相等
+上述判断方法会有局限性
+
+
+
+算法实现需要考虑的问题：
+1. 实现方案，仅算法中的操作是怎么实现的：如求值，合并分组，等等。
+实现细节：junit,jdt,断点
+We are currently working on Java programs. JVM makes it very convenient to ``halt" the execution process at a certain point and evaluate the value of an expression on a hot stack, which is in orders of magnitude faster than a complete ``rebuild-and-rerun" procedure. Therefore, through early filtration, we can save a large amount of time since mass majority of the candidates can be filtered out before entering to the validation process.
+
+2. 如何求值，副作用怎么解决，对划定fix pattern中需要填的空做了哪些限制
+
+3. 判别次数
+
+
+
+
 \begin{table*}[!t]
 	\centering
 	\caption{Search Space Specification}
@@ -61,111 +252,78 @@ GenProg\cite{6035728}\cite{6227211} performs genetic search to generate fixes th
 	\vspace{-1.8em}
 \end{table*}
 
-\section{Tool Design}
 
-Figure 1 shows the system architecture of \SmartDebug. \SmartDebug consists two major components, the \textit{Interactive Frontend} and the \textit{Fix Generation Backend}. The Interactive Frontend provides facilities for programmers to describe their judgments and expectations of the program running state through ``Checkpoints" (\textit{Checkpoint Manager}). It also tracks the debugging process of the program, i.e. the satisfaction status of each Checkpoint on each test case, guiding the programmer through the whole debugging task (\textit{Debug Process Controller}). The \textit{Fix Generation Backend} first localizes the bug by collecting and analyzing the execution trace of each test case (the \textit{Fault Localizer)}, then generates program mutations within a predefined \textit{Search Space} according to the generated ranking list of suspicious fix sites (\textit{Search Engine}), after which some of the mutations go through a \textit{Filter} that removes mutations impossible to fix the bug. Finally the survived mutations are validated by applying them back to the program and rerun the test suite (\textit{Final Validator}).
-
-Search space specification is vital in fix correctness rate in generate-and-validate systems. \SmartDebug adopts the mutation patterns listed in Table I, whose first column lists the name of patterns and the second column provides brief explanations.
-
-\SmartDebug distinguishes itself from peer systems by two major features. One is the interactive debugging usage model, which requires a collaboration among several components mentioned above. Second is the early-filtration strategy, implemented in \textit{Filter}. 
-
-\subsection{Interactive Debugging}
-
-The interactive debugging usage model aims to take advantage of programmers' understanding of the program under test to break down complicated bugs into simple fractions and narrow down possible bug locations to improve the debug efficiency.
-
-From the programmers' perspective, \SmartDebug works as a personal consultant. During the common debugging process using JDT debug frontend, the programmer is able to describe his judgment of the program running state at a certain point of execution to \SmartDebug through \textit{Checkpoints}. If the program executes correctly, the programmer can mark down this execution point as ``correct". Otherwise, he or she can input a boolean expression that should evaluate to \texttt{true} if the program runs correctly as a description of his or her expectations.
-
-\SmartDebug tracks the current debugging process. Figure 2 shows a snapshot of the debug process control panel. The panel lists every checkpoint and their current satisfaction status. For each failing test case, \SmartDebug will find the first failing checkpoint it encounters during execution. The programmer may choose any failing checkpoints as the debug target in the next step.
-
-When searching for fixes, the fault localizer utilizes the information of checkpoint to achieve more accurate fault localization. We adopt the Ochiai\cite{Abreu:2006:ESC:1193217.1194368} fault localization metric, however the execution trace of the test case containing the target checkpoint is divided into two segments by the last correct checkpoint. The first segment is counted as a successful execution trace, while the second failing. Only code lines covered by the second segment will be treated as possible fix positions. Therefore \SmartDebug is able to focus on a possibly small fraction of programs.
-
-In the validation process, we do not rigorously require the candidate fixes to pass all test cases, instead we report every fix that can fix the target checkpoint while we rank the fixes according to the number of test cases the program passes if they are applied.
-
-
-
-
-\subsection{Early Filtration}
-
-The huge search space has always been an obstacle in developing efficient generate-and-validate systems. ``Early filtration", by the name, means to filter impossible fix candidates early in the generate phase, so that they do not flow to the validate phase, which leads to a dramatic compression of the search space and improves efficiency sharply. Unlike SPR\cite{Long:2015:SPR:2786805.2786811}, ``early filtration" works on fixes that modifies expressions, or that contains modifications of expressions, thus are not limited to only condition expression.
-
-``Early filtration" is proposed based on the observation that if an expression A is to be replaced with an expression B, then:
-\begin{itemize}	
-	\item{In order to ensure that all the passed tests remain passed, B should be ``equal" to A at each time the program runs to the position where A is evaluated.}
-	\item{In order to correct the failed tests, B should NOT be ``equal" to A in at least one time when A is evaluated.}
-\end{itemize}
-
-For fix pattern 1, this observation can be applied directly. For fix patterns 2-6, the modified or newly introduced branch condition should be seen as expression A in the above observation.
-
-Note that the criteria of ``equality" is critical in applying this observation. Equality between primitive values is straight forward. For non-primitive objects, equality is defined as the equality of all primitive-typed fields of the object.
-
-We are currently working on Java programs. JVM makes it very convenient to ``halt" the execution process at a certain point and evaluate the value of an expression on a hot stack, which is in orders of magnitude faster than a complete ``rebuild-and-rerun" procedure. Therefore, through early filtration, we can save a large amount of time since mass majority of the candidates can be filtered out before entering to the validation process.
-\section{Evaluation}
-
-\subsection{Effectiveness of Early Filtration}
-We propose ``early filtration" strategy to improve the search efficiency of ``generate-and-validate" systems. To evaluate its effectiveness, we tested \SmartDebug against the Defects4J\cite{Just:2014:DDE:2610384.2628055}
-benchmark, a collection of several hundred versions of 5 real world programs. We compared the number of fixes that needed to be validated in the final validator with or without ``early filtration".
-
-\SmartDebug succeeded in fixing 24 bugs in Defects4J, the largest number currently reported on this benchmark. Table II presents the number of program mutations generated before and survived after filtration. Column ``EXPR" records the number of expression related mutations where early filtration is applicable. ``METHOD" denotes the number of method overriding and overloading mutations where early filtration is not applicable. Column ``VAL" reports the number of mutations that need to be validated by the final validator, which includes the survived expression related mutations and also method related mutations. The last column computes the reduction rate. Results show that in 12 versions only 10\% mutations needs to be validated while in 8 more versions only 20\%. The reduction is especially remarkable when large number of mutations are generated as in closure compiler version 1, 10, 118, 125, 92 and 93.
-
-\begin{table}[!t]
+\section{实验结果及分析}%7
+缺陷列表及对应实验数据
+与相关工作修复正确率与效率的比较（有些没有数据报告的）
+% Please add the following required packages to your document preamble:
+% \usepackage{multirow}
+%\caption{预过滤算法在Defects4J上的效果}
+%\label{tab:early-filter}
+\begin{landscape}
+% Please add the following required packages to your document preamble:
+% \usepackage{multirow}
+\begin{table}[]
 	\centering
-	\caption{Early Filtration Effectiveness on Defects4J}
-	\label{defects4j}
-	\begin{tabular}{|l|l|l|l|l|}
+	\caption{My caption}
+	\label{my-label}
+	\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|}
 		\hline
-		Version\_ID            & EXPR  & METH & VAL & RED   \\ \hline
-		closure\_compiler\_1   & 154963 & 624 & 1878     & 1.21\%   \\ \hline
-		closure\_compiler\_10  & 249694 & 2783 & 3596     & 1.42\%   \\ \hline
-		closure\_compiler\_118 & 298024 & 1311 & 1635     & 0.55\%   \\ \hline
-		closure\_compiler\_125 & 212912 & 417 & 530      & 0.25\%   \\ \hline
-		closure\_compiler\_51  & 1812   & 54   & 58       & 3.11\%   \\ \hline
-		closure\_compiler\_62  & 61     & 1     & 4        & 6.45\%   \\ \hline
-		closure\_compiler\_63  & 327    & 77    & 80       & 19.80\%  \\ \hline
-		closure\_compiler\_73  & 1052   & 7   & 11       & 1.04\%   \\ \hline
-		closure\_compiler\_86  & 869    & 160   & 177      & 17.20\%  \\ \hline
-		closure\_compiler\_92  & 17300  & 279  & 1550     & 8.82\%   \\ \hline
-		closure\_compiler\_93  & 17475  & 279  & 1538     & 8.66\%   \\ \hline
-		commons\_lang3\_24     & 950    & 6    & 124      & 12.97\%  \\ \hline
-		commons\_lang3\_26     & 313    & 43    & 58       & 16.29\%  \\ \hline
-		commons\_lang3\_6      & 375    & 57    & 122      & 28.24\%  \\ \hline
-		commons\_math\_75      & 1      & 35     & 36       & 100.00\% \\ \hline
-		commons\_math\_80      & 1033   & 100   & 391      & 34.51\%  \\ \hline
-		commons\_math\_82      & 704    & 80    & 95       & 12.12\%  \\ \hline
-		commons\_math\_85      & 230    & 39    & 42       & 15.61\%  \\ \hline
-		commons\_math3\_33     & 1527   & 56   & 69       & 4.36\%   \\ \hline
-		commons\_math3\_5      & 58     & 0     & 8        & 13.79\%  \\ \hline
-		jfreechart\_1          & 7632   & 193   & 1134     & 14.49\%  \\ \hline
-		jfreechart\_11         & 256    & 8    & 9        & 3.41\%   \\ \hline
-		jfreechart\_24         & 54     & 26     & 40       & 50.00\%  \\ \hline
-		jfreechart\_9          & 61     & 3     & 4        & 6.25\%   \\ \hline
-	\end{tabular}
-	\vspace{-0.7em}
-\end{table}
-
-\subsection{Interactive Debugging Efficiency}
-We collected 25 versions of buggy programs from a coding exam for first year graduate students and asked students in the same year to debug these programs with or without help of \SmartDebug. We recorded the time cost on both situations and compared them in Table III.
-
-
-\begin{table}[!b]
-	\label{tab:sd-vs-human}
-	\centering
-	\caption{SmartDebug v.s. Human}
-	\vspace{-0.8em}
-	\begin{tabular}{|c|l|c|c|} \hline
-		No.& Bug Summary 									& SD(s) & H(s)	\\	\hline
-		1  & wrong usage of loop variables					& 282	& 300	\\	\hline
-		2  & wrong operator									& 95	& 691	\\	\hline
-		3  & wrong usage of a local variable				& 1055	& 694	\\  \hline
-		4  & wrong usage of loop variables					& 260	& 423	\\	\hline
-		5  & wrong usage of loop variables					& 309	& 410	\\	\hline
-		6  & wrong usage of loop variables					& 198	& 341 	\\	\hline
-		7 & wrong usage of a numeric variable				& 215	& 829	\\	\hline
-		8 & wrong usage of a local variable				& 228	& 600	\\	\hline
-		
+		\multirow{2}{*}{Version ID} & \multirow{2}{*}{FP} & \multicolumn{4}{l|}{PRE}         & \multicolumn{4}{l|}{POST} & \multirow{2}{*}{MTD} & \multicolumn{2}{l|}{FINAL} & \multicolumn{2}{l|}{COMPRESSION} \\ \cline{3-10} \cline{12-15} 
+		&                     & EXPR  & BOOL   & CE     & SUM    & EXPR  & BOOL  & ES  & BS  &                         & TOTAL        & VAL         & FULL            & EXPR           \\ \hline
+		closure-compiler-1          &                     & 6362  & 256275 & 107674 & 154963 & 860   & 13999 & 291 & 963 & 624                     & 15483        & 1878        & 0.01207         & 0.00809        \\ \hline
+		closure-compiler-10         &                     & 19223 & 385645 & 155174 & 249694 & 1778  & 4937  & 118 & 695 & 2783                    & 9498         & 3596        & 0.01424         & 0.00326        \\ \hline
+		closure-compiler-118        &                     & 6229  & 468011 & 176216 & 298024 & 491   & 7637  & 76  & 248 & 1311                    & 9439         & 1635        & 0.00546         & 0.00109        \\ \hline
+		closure-compiler-125        &                     & 5177  & 347358 & 139623 & 212912 & 141   & 1335  & 5   & 108 & 417                     & 1893         & 530         & 0.00248         & 0.00053        \\ \hline
+		closure-compiler-51         &                     & 791   & 4500   & 3479   & 1812   & 0     & 29    & 0   & 4   & 54                      & 83           & 58          & 0.03108         & 0.00221        \\ \hline
+		closure-compiler-62         &                     & 4     & 164    & 107    & 61     & 1     & 7     & 1   & 2   & 1                       & 9            & 4           & 0.06452         & 0.04918        \\ \hline
+		closure-compiler-63         &                     & 90    & 560    & 323    & 327    & 1     & 7     & 1   & 2   & 77                      & 85           & 80          & 0.19802         & 0.00917        \\ \hline
+		closure-compiler-73         &                     & 18    & 4486   & 3452   & 1052   & 0     & 18    & 0   & 4   & 7                       & 25           & 11          & 0.01039         & 0.0038         \\ \hline
+		closure-compiler-86         &                     & 556   & 1127   & 814    & 869    & 95    & 166   & 0   & 17  & 160                     & 421          & 177         & 0.17201         & 0.01956        \\ \hline
+		closure-compiler-92         &                     & 1479  & 23151  & 7330   & 17300  & 1051  & 2830  & 617 & 654 & 279                     & 4160         & 1550        & 0.08817         & 0.07347        \\ \hline
+		closure-compiler-93         &                     & 1479  & 23194  & 7198   & 17475  & 1051  & 2767  & 617 & 642 & 279                     & 4097         & 1538        & 0.08663         & 0.07205        \\ \hline
+		commons-lang3-24            &                     & 161   & 1253   & 464    & 950    & 30    & 261   & 7   & 111 & 6                       & 297          & 124         & 0.12971         & 0.12421        \\ \hline
+		commons-lang3-26            &                     & 16    & 410    & 113    & 313    & 8     & 89    & 8   & 7   & 43                      & 140          & 58          & 0.16292         & 0.04792        \\ \hline
+		commons-lang3-6             &                     & 240   & 385    & 250    & 375    & 68    & 51    & 44  & 21  & 57                      & 176          & 122         & 0.28241         & 0.17333        \\ \hline
+		commons-math-75             &                     & 3     & 3      & 5      & 1      & 1     & 0     & 1   & 0   & 35                      & 36           & 36          & 1               & 1              \\ \hline
+		commons-math-80             &                     & 752   & 522    & 241    & 1033   & 519   & 48    & 283 & 8   & 100                     & 667          & 391         & 0.3451          & 0.2817         \\ \hline
+		commons-math-82             &                     & 295   & 1215   & 806    & 704    & 5     & 42    & 3   & 12  & 80                      & 127          & 95          & 0.12117         & 0.02131        \\ \hline
+		commons-math-85             &                     & 157   & 238    & 165    & 230    & 0     & 10    & 0   & 3   & 39                      & 49           & 42          & 0.15613         & 0.01304        \\ \hline
+		commons-math3-33            &                     & 790   & 1707   & 970    & 1527   & 3     & 25    & 3   & 10  & 56                      & 84           & 69          & 0.04359         & 0.00851        \\ \hline
+		commons-math3-5             &                     & 12    & 68     & 22     & 58     & 4     & 24    & 4   & 4   & 0                       & 28           & 8           & 0.13793         & 0.13793        \\ \hline
+		jfreechart-1                &                     & 1222  & 7898   & 1488   & 7632   & 873   & 2526  & 816 & 125 & 193                     & 3592         & 1134        & 0.14492         & 0.1233         \\ \hline
+		jfreechart-11               &                     & 56    & 465    & 265    & 256    & 0     & 2     & 0   & 1   & 8                       & 10           & 9           & 0.03409         & 0.00391        \\ \hline
+		jfreechart-24               &                     & 56    & 9      & 11     & 54     & 34    & 0     & 14  & 0   & 26                      & 60           & 40          & 0.5             & 0.25926        \\ \hline
+		jfreechart-9                &                     & 25    & 107    & 71     & 61     & 0     & 1     & 0   & 1   & 3                       & 4            & 4           & 0.0625          & 0.01639        \\ \hline
 	\end{tabular}
 \end{table}
+\end{landscape}
 
-Experiments show that without human interference, \SmartDebug is able to generate correct fix suggestions for 8 of the buggy versions in acceptable time. On 7 versions of programs \SmartDebug accelerated the manual debugging process. Generally with help of \SmartDebug the debug task is finished within 5 minutes.
+“预过滤”策略对搜索空间的压缩作用：将其与SPR、NOPOL的压缩效果进行比较分析
 
-\section{Conclusion}
+We propose ``early filtration" strategy to improve the search efficiency of ``generate-and-validate" systems. To evaluate its effectiveness, we tested \SmartDebug against the Defects4J\cite{Just:2014:DDE:2610384.2628055}
+benchmark, a collection of several hundred versions of 5 real world programs. Defects4J的基本信息见表\ref{tab:defects4j}。
+
+We compared the number of fixes that needed to be validated in the final validator with or without ``early filtration". \SmartDebug succeeded in fixing 24 bugs in Defects4J, the largest number currently reported on this benchmark. Table II presents the number of program mutations generated before and survived after filtration. Column ``EXPR" records the number of expression related mutations where early filtration is applicable. ``METHOD" denotes the number of method overriding and overloading mutations where early filtration is not applicable. Column ``VAL" reports the number of mutations that need to be validated by the final validator, which includes the survived expression related mutations and also method related mutations. The last column computes the reduction rate. Results show that in 12 versions only 10\% mutations needs to be validated while in 8 more versions only 20\%. The reduction is especially remarkable when large number of mutations are generated as in closure compiler version 1, 10, 118, 125, 92 and 93.
+
+
+
+
+列出SPR的搜索空间：
+
+%TODO:SPR search space table
+
+分析以上哪些被SPR的搜索空间覆盖，哪些没有。分析两个搜索空间的大小关系，给出定性的比较。
+比较NOPOL在测试集上效果，列出哪些例子NOPOL可以完成，哪些做不了
+
+局限性：测试用例设计的不足，如stringbuffer类中的buffer检查不够严格
+
+\section{系统可能的改进}
+实际应用中的局限性：例如仍然只关注了单点错误，且替换内容也比较简单，还到不了添加一段话的程度。
+
+解决方案：可以局部利用程序综合技术，给出构造片段的逻辑公式，扔给smt去求解
+
+另外，可以利用Prophet中的排序技术进一步优化。本文我们只比较搜索空间，如果应用排序应有更好的效果
+
+\section{本章小结}%1
 In this paper, we present \SmartDebug, an interactive debug assistant for Java. \SmartDebug distinguishes from existing ``generate-and-validate" systems in two major features, the interactive usage paradigm and early-filtration optimization strategy. Experiments show that through early-filtration, program mutations are dramatically reduced when entering the validation phase, thus accelerating the fix generation process prominently. Through the interactive usage model, \SmartDebug is capable of supporting multi-location fixes that cover wider practical usage scenarios. Experimental results show that \SmartDebug is able to facilitate the manual debugging process.
