@@ -10,33 +10,33 @@
 
 图\ref{fig:chap01.workflow}展示了“生成-检验”框架的一般结构和工作流程。如图所示，“生成-检验”系统的输入包括程序源代码、测试代码和测试结果（如通过、不通过、错误路径等），内部共包含“错误定位器”，“搜索引擎”和“检验器”三个主要模块，分别对应“错误定位”、“变体生成”和“修复检验”三个主要工作步骤，最终系统输出一系列可能的修改建议，使得源代码经修改后可以通过测试代码中的测试。具体而言，首先，错误定位器将分析程序的运行轨迹，找出源代码中与测试错误相关的部分，称为“可修改位置”，并将各个位置按照出错的可能性由高到底排序，形成“可修改位置”列表。接着，搜索引擎按照这一列表由高到低的顺序针对各个位置生成可能的代码修改方案。最终，检验器将这些修改方案逐一应用到源代码中，重新编译并执行测试代码。当测试代码通过时，被检验的修改方案输出给开发人员，通过人工判断决定采用哪一种修改方案。
 
-\begin{lstlisting}[caption=“生成-检验”框架应用示例,frame=single,language=Java,numbers=left]
+\begin{lstlisting}[caption=“生成-检验”框架应用示例,frame=single,language=Java,numbers=left,basicstyle=\ttfamily\footnotesize]
 public class Calculator {
-public int add (int a, int b) {
-return a + b;
-}
-public int minus (int a, int b) {
-return a + b; // Error: should be (a - b)
-}
+  public int add (int a, int b) {
+    return a + b;
+  }
+  public int minus (int a, int b) {
+    return a + b; // Error: should be (a - b)
+  }
 }
 \end{lstlisting}
 
-\begin{lstlisting}[caption=“生成-检验”框架应用示例,frame=single,language=Java,numbers=left]
+\begin{lstlisting}[caption=“生成-检验”框架应用示例,frame=single,language=Java,numbers=left,basicstyle=\ttfamily\footnotesize]
 public class CalculatorTest {  
-@Test
-public void testAdd () {
-Calculator cal = new Calculator();
-int a = 1;
-int b = 2;
-Assert.assertEquals(3, cal.add(a, b));
-}  
-@Test
-public void testMinus (int a, int b) {
-Calculator cal = new Calculator();
-int a = 1;
-int b = 2;
-Assert.assertEquals(-1, cal.minus(a, b));
-}  
+  @Test
+  public void testAdd () {
+    Calculator cal = new Calculator();
+    int a = 1;
+    int b = 2;
+    Assert.assertEquals(3, cal.add(a, b));
+  }  
+  @Test
+  public void testMinus (int a, int b) {
+    Calculator cal = new Calculator();
+    int a = 1;
+    int b = 2;
+    Assert.assertEquals(-1, cal.minus(a, b));
+  }  
 }
 \end{lstlisting}
 

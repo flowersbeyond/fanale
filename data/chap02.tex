@@ -219,7 +219,19 @@ $$
 实验数据中的另一个有趣的现象是，两个理论分析结果中最优的计算公式对测试准则错误的敏感程度超过了Ochiai，而Ochiai又超过了Tarantula。直觉上，这一现象可以解释为表现更优秀的计算公式应该对测试过程中的数据利用的更充分，因此也会对数据的错误更加敏感。但是实验数据也显示Naish2的实测结果不如Ochiai。由此这几个计算公式之间的优劣关系仍然有待研究。
 
 在本节中，实验数据说明SFL算法的定位精度确实会因测试准则的错误受损,测试准则的错误率越高，SFL算法的准确率受损程度越高。因此，为了使得SFL算法能够在“生成-验证”系统中起到应有的作用，应尽量识别并改正测试准则中的错误。
+\begin{figure}
+	\centering
+	\includegraphics[width=1\linewidth]{chap02/origin_mut0_05_score}
+	\caption{Score distribution of 4 SFL algorithms with correct and $mr = 0.05$ oracles}
+	\label{fig:score-correct-0.05}
+\end{figure}
 
+\begin{figure*}
+	\centering
+	\includegraphics[width=1\linewidth]{chap02/compr}
+	\caption{Accuracy compromise of 4 SFL algorithms as $mr$ ranges from $0.01$ to $0.1$}
+	\label{fig:compr}
+\end{figure*}
 \section{测试Oracle纠错算法}
 修正测试准则的错误判断具有一定的难度。首先，测试准则的设计初衷是检查和判断程序的正确性，而不是作为被程序检查的对象。换言之，没有其他的标准可以用来检查测试准则的正确性。考虑到测试准则最初是开发人员根据自己对程序行为的理解建立的，一种可能的解决办法是人工进行多次检查。然而，检查测试准则可能与建立一样耗时耗力。哪怕我们愿意接受这些成本，考虑到测试准则中的错误本身很难发现，重新检查一遍也未必能够清理掉这些错误。
 
@@ -304,7 +316,7 @@ Suspicion(t_i) = \left\{
 \right.
 $$
 
-\subsection{Parameter Settings}
+\subsection{参数设置}
 \label{subsection: param}
 
 算法\ref{alg: debugMain}涉及两个重要的参数，其一是投票组中的测试用例数$n$，二是可疑度阈值$thres$。这两个参数都是预设的常数，因此其值应科学选取。从直观上分析，若$n$太小，如$n = 2$，那么很可能投票组中的两个测试用例的测试结果也有错误，那么投票结果也是不可信的。而如果$n$过大，则投票组中将很可能包含许多与所关心的测试用例并不相似的测试用例，其投票结果同样不可靠。类似的，若参数$thres$设置的过高，那么测试准则的判断错误将可能被漏掉。相反，若$thres$太低，则很多实际正确的测试结果会被误认为错误。
@@ -340,6 +352,12 @@ $\mathbf{P}(O_c(t_{iq_1}) = O_c(t_{iq_2})) = {sim}_i\  (constant)$
 公式\ref{equ: fn single}和\ref{equ: fp single}的详细推导过程请参见附录。
 
 上述公式可以指导$n$和$thres$的取值决策过程。决策过程的第一步是分析$\phi_i$的取值情况。$\phi_i$是$r$和$sim_i$的函数，图\ref{fig:phi}展示了三者之间的量化关系。
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{chap02/phi}
+	\caption{Value range of $\phi_i$ relative to $r$ and ${sim}_i$}
+	\label{fig:phi}
+\end{figure}
 如图所示，$0 < \phi_i < 1$。由于我们假定测试准则的大部分判断是正确的，即$r > 0.5$，并且在这一范围下，$\phi_i > 0.5$，因此显然$\mathbf{P}(fn(t_i))$随$\hat{n}$的增加而剧烈增加，$\mathbf{P}(fp(t_i))$随$\hat{n}$的增加而剧烈减少。
 合理的参数取值应当使FN和FP的比例同时尽可能低。直观上似乎应使$thres = 0.5$，这样FP和FN都不会太高，而量化分析的结果也确实如此。表\ref{tab:calculate fp fn}列出了$P(fn(t_i))/r$和$P(fp(t_i))/(1 - r)$两个算式在$n = 3, 4, 5$，$\hat{n} = 1,\cdots, 4$及$\phi_i = 0.7, 0.8, 0.9$所有组合下的取值。表格中标红的参数组合是在确定$n$的取值下我们选出的最优参数组合。选择的理由有两个，首先$r$相对较小，一个较大的$P(fn(t_i))/r$与之相乘时计算结果也不会很大，但是一个较大的$P(fp(t_i))/(1 - r)$与$(1-r)$相乘则计算结果也会较大，因此在$n = 4$时我们选择$\hat{n} = 2$。第二，实验结果表明FP的存在对SFL算法精度的负面影响更加明显，使$\hat{n}$与$n$距离稍远可以带来更好的错误定位精度，因此在$n = 5$时我们选择$\hat{n} = 2$。
 \begin{landscape}
@@ -387,7 +405,12 @@ $\mathbf{P}(O_c(t_{iq_1}) = O_c(t_{iq_2})) = {sim}_i\  (constant)$
 将$n = 4$和$thres = 0.58$带入到算法框架中，我们在待修改的测试准则上运行了调试算法，并将输出结果与输入结果对比。按照\cite{Steimann:2013:TVV:2483760.2483767}中的要求，为获得稳定可靠的结果，我们将实验重复了五次。实验结果的观察指标共三个，包括（1）召回率（recall），表示算法发现测试准则错误的能力，（2）精度（precision），表示算法保留测试准则正确判断的能力，（3）F1指数（f1 measure），表示前两个指标的综合成绩。
 
 图\ref{fig:mut_rec_prec_cropped}展现了三个指标在所有程序变体和不同错误率下的分布情况。其中，给定召回率$rec$、错误率$mr$，纵坐标比率$p(rec, mr)$的含义是，在错误率$mr$时，所有输出测试准则的召回率不低于$rec$的测试用例占测试集的比例$mr$。 对精度$pre$和F1指数$f1$，$p(pre, mr)$和$p(f1, mr)$也有类似定义。
-
+\begin{figure}
+	\centering
+	\includegraphics[width=1\linewidth]{chap02/mut_rec_prec}
+	\caption{Recall and precision distribution as $mr$ ranges from $0.01$ to $0.1$}
+	\label{fig:mut_rec_prec_cropped}
+\end{figure}
 如图所示，平均来看算法在超过90\%的程序变体上达到了85\%的召回率，也即超过85\%的测试准则错误被成功发现。另一方面，算法在不同错误率的测试准则上达到的精度也各不相同。当$mr$取中位数$0.05$时，在超过80\%的程序变体上算法的精度达到了75\%，即算法所识别出的测试准则错误中超过75\%的确是错误。当$mr$增长到$0.1$时，算法精度上升到80\%。这一趋势也在F1指数的图像上显示出来，当$mr$趋向1时，由于召回率接近1，F1指数的图像与精度类似。
 
 观察在x-y平面上的等高线投影可以发现一个有趣的现象。首先，当$mr$低于$0.02$时，在50\%的测试用例上，算法识别出的错误中超过20\%是FP，在30\%的测试用例上，FP比率超过了40\%。另一方面，召回率在约80\%左右的程序变体上超过了90\%，可见实验数据与直觉完全相符，当召回率很高时，FN较低，FP较高，精度也较低。
@@ -417,11 +440,39 @@ $$
 
 在这两张图中，给定$\Delta_x$和测试准则错误率$r$，纵坐标比率$p$的含义是所有在测试准则纠错前后SFL的精度提高超过了$\Delta_x$的测试用例所占比例。如图\ref{fig: mut-absImp}所示，不同算法的精度在不同程度上有所提高。例如，使用算法Russel\&Rao，在约有30\%的程序变体上算法精度提高了10\%，这意味着在实际的“生成-检验”系统实现中，搜索引擎所需检查的代码减少了10\%，搜索效率大大提升。
 
-从图\ref{fig:mut-absImp}中的图像来看，似乎在许多程序变体上SFL的精度提高并不明显。这是因为对于大多数程序而言，哪怕是使用错误的测试准则作为输入，SFL的定位精度分值仍然在30\%以下，因此绝对提升的空间有限。但是图\ref{fig: mut-relImp}显示，对超过50\%的程序变体而言精度的相对提升幅度较大，提升最明显的是Russel\&Rao，在超过50\%的程序变体上定位精度的相对提升幅度超过了50\%。
+从图\ref{fig: mut-absImp}中的图像来看，似乎在许多程序变体上SFL的精度提高并不明显。这是因为对于大多数程序而言，哪怕是使用错误的测试准则作为输入，SFL的定位精度分值仍然在30\%以下，因此绝对提升的空间有限。但是图\ref{fig: mut-relImp}显示，对超过50\%的程序变体而言精度的相对提升幅度较大，提升最明显的是Russel\&Rao，在超过50\%的程序变体上定位精度的相对提升幅度超过了50\%。
 
-从图\ref{fig: perfomance improvement}中可以看出，SFL算法的定位精度在测试准则经过纠错后有了明显恢复。由于这四种算法都是研究公认的“最优”或应用最广泛的是算法，因此我们认为这一结论可以推广到SFL一族的其他算法上。
+从图\ref{fig: perfomance_improvement}中可以看出，SFL算法的定位精度在测试准则经过纠错后有了明显恢复。由于这四种算法都是研究公认的“最优”或应用最广泛的是算法，因此我们认为这一结论可以推广到SFL一族的其他算法上。
 
-
+\begin{figure}
+	\centering
+	\begin{subfigure}{15cm}
+		\includegraphics[width=1\linewidth]{chap02/mut_mutScore}
+		\caption{Score distribution on erroneous oracle mutants}
+		\label{fig: mutScore}
+	\end{subfigure}%
+\hspace{0.5cm}
+	\begin{subfigure}{15cm}
+		\includegraphics[width=1\linewidth]{chap02/mut_autoScore}
+		\caption{Score distribution on debugged mutants}
+		\label{fig: autoScore}
+	\end{subfigure}%
+\hspace{0.5cm}
+	\begin{subfigure}{15cm}
+		\includegraphics[width=1\linewidth]{chap02/mut_absImp}
+		\caption{Distribution of absolute improvement}
+		\label{fig: mut-absImp}
+	\end{subfigure}%
+\hspace{0.5cm}
+	\begin{subfigure}{15cm}
+		\includegraphics[width=1\linewidth]{chap02/mut_relImp}
+		\caption{Distribution of relative improvement}
+		\label{fig: mut-relImp}
+	\end{subfigure}%
+	
+	\caption{Performance improvement of four SFL algorithms on the debugged oracle}
+	\label{fig: perfomance_improvement}	
+\end{figure}
 \subsubsection{\texttt{grep}上的测试结果}
 
 \texttt{grep}是类Unix系统中常用的字符串匹配程序，其功能是在文本文件中查找符合某一模式的字符串。SIR\cite{doESE05}提供了\texttt{grep}的5个发布版本，每个版本都包括18个有植入错误的程序变体及其相应的测试集。初步测试显示，很多程序变体中的错误无法被测试集中的测试触发，因此本节实验的程序对象将这部分程序变体移除了。特别的，版本5只有一个程序变体，但其中的错误无法被触发，因此版本5整体被移除了。表\ref{Tab: grep-info}列出了基本发行版本的基本信息。
@@ -442,6 +493,11 @@ $$
 
 与在西门子测试集上的实验设计相同，我们首先利用未植入错误的程序版本为所有程序变体生成了正确的测试准则，接着按概率$mr\in [0.01, 0.1]$随机改变测试准则的输出获取错误的测试准则，最终比较SFL算法在错误的测试准则和纠错后的测试准则上的定位精度。实验重复了5次，图\ref{Fig: grep}展示了实验结果。
 
+\begin{figure}
+	\includegraphics[width=1\linewidth]{chap02/grep}
+	\caption{accuracy of four SFL algorithms on \texttt{grep} with mutated and debugged oracles}
+	\label{Fig: grep}
+\end{figure}
 
 图\ref{Fig: grep}展示了在四个版本的\texttt{grep}上SFL的错误定位精度。鉴于总共只有4个版本，我们可以更清晰的看到算法\ref{alg: debugMain}对每个程序的影响。对使用同一SFL算法的每个版本的程序，红线表示当测试准则错误率在$[0.01,0.1]$上变化时定位精度的变化情况，绿线表示使用纠错后的测试准则时的定位精度。在大多数程序变体上，所有SFL算法的定位精度都有所提高。其中变化最显著的是Russel\&Rao，Ochiai的精度虽没有明显提高，但也没有降低。
 
@@ -457,7 +513,12 @@ $$
 %TODO:??
 此外，我们还可以推断出测试准则的哪一类错误，即“假通过”或“假失败”，对SFL算法的精度影响更大？这一问题的重要性在于，在实际的软件开发过程中，尽量避免测试准则错误总是比使用SFL定位错误更加经济。分析实验数据我们发现，对于西门子测试中的绝大多数程序变体，大约有5\%的测试用例能够触发程序中的错误，这导致大多数的测试准则错误是“假失败”，而“假通过”很少发生。当召回率较高时，几乎所有的测试准则错误都会被纠正过来，这大幅减少了“假失败”的数量，但对“假成功”影响较小。这样一来，召回率实际上可以被当做纠错后的测试准则其中所包含的错误类型分布的观察指标，即较高的召回率通常意味着较少的“假失败”和较多的“假成功”。由图\ref{fig:rec_abs_relImp}中的趋势可以看出，较少的“假失败”也和更明显的SFL定位精度提高同时出现。因此我们可以得出结论，“假失败”的确对SFL定位精度的影响更严重，在实际开发过程中应当尤其注意避免。
 
-
+\begin{figure}
+	\centering
+	\includegraphics[width=0.8\linewidth]{chap02/rec_abs_relImp}
+	\caption{Absolute and relative improvement related to recall}
+	\label{fig:rec_abs_relImp}
+\end{figure}
 
 %\section{Threats to Validity}
 

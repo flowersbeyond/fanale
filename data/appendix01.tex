@@ -1,3 +1,223 @@
-\chapter{公式证明}
+\chapter{公式2-2和2-3的证明}
 \label{cha:proof}
-这是FL论文的公式证明
+
+Let $\mathbf{P}(*)$ denote the probability of $*$. Let $O_c$ be the correct test oracle.
+There are two cases of false negatives and two cases of false positives. For expression simplicity, we encode them as follows: \\
+1. $P_O F_{O_c} P_{O'}$:$O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F} \wedge O'(t_i) = \mathcal{P}$ \\
+2. $F_O P_{O_c} F_{O'}$:$O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P} \wedge O'(t_i) = \mathcal{F}$ \\
+3. $P_O P_{O_c} F_{O'}$:$O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P} \wedge O'(t_i) = \mathcal{F}$ \\
+4. $F_O F_{O_c} P_{O'}$:$O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{F} \wedge O'(t_i) = \mathcal{P}$
+
+Let $r$ be the error rate of the test oracle, i.e. the ratio of faulty oracle judgements to all oracle judgements. Then the probability that $t_i$ is false negative is
+\begin{equation}
+\label{equ:FN}
+\begin{aligned}
+& \mathbf{P}(fn(t_i))= \mathbf{P}(P_O F_{O_c} P_{O'}) + \mathbf{P}(F_O P_{O_c} F_{O'})
+\end{aligned}
+\end{equation}
+And the probability that $t_i$ is false positive is
+\begin{equation}
+\begin{aligned}
+\label{equ: FP}
+& \mathbf{P}(fp(t_i))= \mathbf{P}(P_O F_{O_c} P_{O'}) + \mathbf{P}(F_O P_{O_c} F_{O'})
+\end{aligned}
+\end{equation}
+
+And now we calculate $\mathbf{P}(P_O F_{O_c} P_{O'})$, $\mathbf{P}(F_O P_{O_c} F_{O'})$, $\mathbf{P}(P_O F_{O_c} P_{O'})$ and $\mathbf{P}(F_O P_{O_c} F_{O'})$.
+
+\begin{equation}
+\label{equ: P and F and P}
+\begin{aligned}
+& \mathbf{P}(P_O F_{O_c} P_{O'}) \\
+= & \mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F} \wedge O'(t_i) = \mathcal{P}) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \cdot \mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F})
+\end{aligned}
+\end{equation}
+
+\begin{equation}
+\label{equ: P | P and F}
+\begin{aligned}
+& \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \\
+= & \mathbf{P}(Suspicion(t_i) \le thres) \\
+= & \mathbf{P}(\frac{Vote_{if}}{Vote_{ip} + Vote_{if}} \le thres) \\
+= & \mathbf{P}(\frac{\sum_{t_{iq}\in T_{i,f}}^{}Sim(t_i, t_{iq})}{\sum_{t_{iq}\in T_i}^{}Sim(t_i, t_{iq})} \le thres)
+\end{aligned}
+\end{equation}
+
+We assume that test cases in $T_i$ are similar enough to $t_i$ and the similarity are almost the same. Then approximately $\forall t_{iq} \in T_i$, $Sim(t_i, t_{iq}) \approx {sim}_i$, where $sim_i$ represents the average similarity of all $Sim(t_i, t_{iq})$. Then we have
+\begin{equation}
+\label{equ: sigma w}
+\begin{aligned}
+& \mathbf{P}(\frac{\sum_{t_{iq}\in T_{i,f}}^{}Sim(t_i, t_{iq})}{\sum_{t_{iq}\in T_i}^{}Sim(t_i, t_{iq})} \le thres) \\
+\approx & \mathbf{P}(\frac{|T_{i,f}| \times {sim}_i}{|T_i| \times {sim}_i} \le thres) \\
+= & \mathbf{P}(\frac{|T_{i,f}|}{|T_i|} \le thres) \\
+= & \mathbf{P} (|T_{i,f}| \le |T_i| \times thres) \\
+= & \sum_{w = 0}^{\hat{n}}{\mathbf{P}(|T_{i,f}| = w)}
+\end{aligned}
+\end{equation}
+where $\hat{n} = \lfloor n \times thres \rfloor$.
+
+Precise calculation of $\mathbf{P}(|T_{i,f}| = w)$ (given $w$) is obviously very complicated. Fortunately in our case an accurate estimation is good enough. To simplify the problem, we make the following two assumptions:
+
+\textit{Assump. 1} : $\forall t_{iq}\in T_i \cup \{t_i\}$, $O_c(t_{iq}) \in \{\mathcal{P}, \mathcal{F}\}$  $i.i.d.$.
+
+\textit{Assump. 2} : $\forall t_{iq_1}$, $t_{iq_2} \in T_i \cup \{t_i\}$, $iq_1 \ne iq_2$, $\mathbf{P}(O_c(t_{iq_1}) = O_c(t_{iq_2})) = {sim}_i\  (constant)$
+
+The reasons for making such assumptions are explained in Section 3.3 thus not repeated here. Based on these two assumptions,
+\begin{equation*}
+\begin{aligned}
+& \mathbf{P}(|T_{i,f}| = w) \\
+= & \mathrm{C}_n^w{(\mathbf{P}(O(t_{iq}) = \mathcal{F}))}^w {(\mathbf{P}(O(t_{iq}) = \mathcal{P}))}^{(n-w)} \\
+= & \mathrm{C}_n^w {(\mathbf{P}(O_c(t_{iq}) = \mathcal{F})\mathbf{P}(O(t_{iq}) = O_c(t_{iq}))+ \mathbf{P}(O_c(t_{iq}) = \mathcal{P})\mathbf{P}(O(t_{iq}) \neq O_c(t_{iq})))}^w \\
+& \cdot {(\mathbf{P}(O_c(t_{iq}) = \mathcal{P})\mathbf{P}(O(t_{iq}) = O_c(t_{iq})) + \mathbf{P}(O_c(t_{iq}) = \mathcal{F})\mathbf{P}(O(t_{iq}) \neq O_c(t_{iq})))}^{(n - w)}
+\end{aligned}
+\end{equation*}
+where $t_{iq}$ is an arbitrary test case in $T_i$.
+
+Remember $r$ is the error rate of the test oracle, then $\mathbf{P}(O(t_{iq}) = O_c(t_{iq})) = 1 - r$, $\mathbf{P}(O(t_{iq}) \neq O_c(t_{iq})) = r$. Use $\beta_i$ to represent $\mathbf{P}(O_c(t_{iq}) = \mathcal{F}), t_{iq}\in T_i$, then $\mathbf{P}(O_c(t_{iq}) = \mathcal{P})= 1 - \beta_i$, and
+\begin{equation}
+\label{equ: single w}
+\begin{aligned}
+& \mathbf{P}(|T_{i,f}| = w) \\
+= & \mathrm{C}_n^w{(\beta_i(1 - r) + (1-\beta_i)r)}^w{((1-\beta_i)(1 - r) + \beta_i r)}^{(n - w)} \\
+= & \mathrm{C}_n^w{(\beta_i + r - 2\beta_i r)^w (1-(\beta_i + r - 2\beta_i r))^{(n-w)}}
+\end{aligned}
+\end{equation}
+
+$r$ is completely dependent on the oracle error itself, so we cannot compute its value from elsewhere. However, $\beta_i$ can be deducted through ${sim}_i$.
+$\forall t_{iq_1}$, $t_{iq_2} \in T_i \cup \{t_i\}$, $iq_1 \ne iq_2$, according to \textit{Assump. 1},
+\begin{equation}
+\begin{aligned}
+& \mathbf{P}(O_c(t_{iq_1}) = O_c(t_{iq_2})) \\
+= & \mathbf{P}(O_c(t_{iq_1}) = \mathcal{P}) \mathbf{P}(O_c(t_{iq_2}) = \mathcal{P}) + \mathbf{P}(O_c(t_{iq_1})=  \mathcal{F}) \mathbf{P}(O_c(t_{iq_2}) = \mathcal{F}) \\
+= & (1-\beta_i)^2 + \beta_i^2
+\end{aligned}
+\end{equation}
+while according to \textit{Assump. 2},
+$$\mathbf{P}(O_c(t_{iq_1}) = O_c(t_{iq_2})) = {sim}_i$$
+Therefore,
+$$
+(1-\beta_i)^2 + \beta_i^2 = {sim}_i
+$$
+Solving this equation, we get $\beta_{i1} = \frac{1 + \sqrt{2 {sim}_i - 1}}{2} or \beta_{i2} = \frac{1 - \sqrt{2 {sim}_i - 1}}{2}$.
+Since we have assumed that all test cases in $T_i \cup \{t_i\}$ are similar enough, ${sim}_i$ should be close to 1, and $2 {sim}_i - 1 > 0$. As we know that $O_c(t_i) = \mathcal{F}$, therefore
+\begin{equation}
+\label{equ: beta}
+\mathbf{P}(O_c(t_{iq}) = \mathcal{F}) = \beta_{i1} = \frac{1 + \sqrt{2 {sim}_i - 1}}{2}
+\end{equation}
+Synthesizing equation \ref{equ: P | P and F}, \ref{equ: sigma w} and \ref{equ: single w},
+\begin{equation}
+\label{equ: P | P and F synth}
+\begin{aligned}
+& \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \\
+= & \sum_{w = 0}^{\hat{n}}{\mathrm{C}_n^w{(\beta_{i1} + r - 2\beta_{i1} r)^w (1-(\beta_{i1} + r - 2\beta_{i1} r))^{(n-w)}}}
+\end{aligned}
+\end{equation}
+
+Similarly, we have
+\begin{equation}
+\label{equ: F and P and F}
+\begin{aligned}
+& \mathbf{P}(F_O P_{O_c} F_{O'}) \\
+= & \mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P} \wedge O'(t_i) = \mathcal{F}) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P}) \cdot \mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P})
+\end{aligned}
+\end{equation}
+and
+\begin{equation}
+\begin{aligned}
+& \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P}) \\
+= & \sum_{w = 0}^{\hat{n}}{\mathbf{P}(|T_{i,p}| = w)} \\
+= & \sum_{w = 0}^{\hat{n}}
+{
+	\mathrm{C}_n^w
+	\cdot{(\mathbf{P}(O(t_{iq}) = \mathcal{P}))}^w 
+	\cdot {(\mathbf{P}(O(t_{iq}) = \mathcal{F}))}^{(n-w)}
+}
+\\
+= & \sum_{w = 0}^{\hat{n}}
+{	\mathrm{C}_n^w
+	\cdot {((1-\beta_i)(1-r) + \beta_i r)}^w
+	\cdot {(\beta_i (1 - r) + (1- \beta_i)r)}^{(n - w)}
+}
+\end{aligned}
+\end{equation}
+where $\beta$ represents $\mathbf{P}(O_c(t_{iq}) = \mathcal{F})$. In this case, $O_c(t_i) = \mathcal{P}$, therefore
+\begin{equation*}
+\mathbf{P}(O_c(t_{iq}) = \mathcal{F}) = \beta_{i2} = \frac{1 - \sqrt{2 {sim}_i - 1}}{2}
+\end{equation*}
+
+Since $\beta_{i1} + \beta_{i2} = 1$, we have
+\begin{equation}
+\label{equ: F | F and P synth}
+\begin{aligned}
+& \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P}) \\
+= & \sum_{w = 0}^{\hat{n}} {\mathrm{C}_n^w{((1-\beta_{i2})(1-r) + \beta_{i2} r)}^w} {{(\beta_{i2} (1 - r) + (1- \beta_{i2})r)}^{(n - w)}} \\
+= & \sum_{w = 0}^{\hat{n}}\mathrm{C}_n^w {(\beta_{i1}(1-r) + (1 - \beta_{i1}) r)}^w 
+				 { {((1 - \beta_{i1}) (1 - r) + \beta_{i1} r)}^{(n - w)}} \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F})
+\end{aligned}
+\end{equation}
+Synthesizing equations \ref{equ:FN}, \ref{equ: F and P and F}, \ref{equ: P and F and P}, \ref{equ: P | P and F synth} and \ref{equ: F | F and P synth}, we have
+\begin{equation}
+\begin{aligned}
+& \mathbf{P}(fn(t_i))= \mathbf{P}(P_O F_{O_c} P_{O'}) + \mathbf{P}(F_O P_{O_c} F_{O'}) \\
+= & \mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F} \wedge O'(t_i) = \mathcal{P}) + \mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P} \wedge O'(t_i) = \mathcal{F}) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \cdot \mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \\
+& + \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P}) \cdot \mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P}) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \\
+&\cdot {\mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F})} { +\mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{P})} \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \cdot \mathbf{P}(O(t_i) \ne O_c(t_i)) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \cdot r \\
+\approx & r \sum_{w = 0}^{\hat{n}}{\mathrm{C}_n^w{\phi_i^w (1-\phi_i)^{(n-w)}}}
+\end{aligned}
+\end{equation}
+where $\phi_i = \beta_{i1} + r - 2\beta_{i1} r$.
+
+Following the same routine,
+\begin{equation}
+\begin{aligned}
+& \mathbf{P}(P_O P_{O_c} F_{O'}) \\
+= & \mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P} \wedge O'(t_i) = \mathcal{F}) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P}) \cdot \mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P}) \\  
+\end{aligned}
+\end{equation}
+and
+\begin{equation}
+\begin{aligned}
+& \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P}) \\
+\approx & \sum_{w = \hat{n} + 1}^{n}{\mathbf{P}(|T_{i,f}| = w)} \\
+= & \sum_{w = \hat{n} + 1}^{n}
+{  \mathrm{C}_n^w{(1 - (\beta_{i1} + r - 2\beta_{i1} r))^w}  }
+{  (\beta_{i1} + r - 2\beta_{i1} r)^{(n-w)}  } \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{F})
+\end{aligned}
+\end{equation}
+then
+\begin{equation}
+\begin{aligned}
+& \mathbf{P}(fp(t_i))= \mathbf{P}(P_O P_{O_c} F_{O'}) + \mathbf{P}(F_O F_{O_c} P_{O'}) \\
+= & (\mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P} \wedge O'(t_i) = \mathcal{F})) 
+ + (\mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{F} \wedge O'(t_i) = \mathcal{P})) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P}) \cdot \mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P}) \\
+& + \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{F}) \cdot \mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{F}) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{F} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P}) \\
+& \cdot{\mathbf{P}(O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{P})}{ +\mathbf{P}(O(t_i) = \mathcal{F} \wedge O_c(t_i) = \mathcal{F})} \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \cdot \mathbf{P}(O(t_i) = O_c(t_i)) \\
+= & \mathbf{P}(O'(t_i) = \mathcal{P} | O(t_i) = \mathcal{P} \wedge O_c(t_i) = \mathcal{F}) \cdot (1-r) \\
+\approx & (1-r)
+\sum_{w = \hat{n} + 1}^{n} \mathrm{C}_n^w{(1 - \phi_i)^w} \phi_i^{(n-w)}
+\end{aligned}
+\end{equation}
+where $\phi_i = \beta_{i1} + r - 2 \beta_{i1} r$.
+
+Finally, we get
+\begin{equation}
+\mathbf{P}(fn(t_i)) \approx r \sum_{w = 0}^{\hat{n}}{\mathrm{C}_n^w{\phi_i^w (1-\phi_i)^{(n-w)}}} \\
+\end{equation}
+\begin{equation}
+\mathbf{P}(fp(t_i)) \approx (1 - r) \sum_{w = \hat{n} + 1}^{n} \mathrm{C}_n^w{(1 - \phi_i)^w} \phi_i^{(n-w)}
+\end{equation}
+
+where $\phi_i = \beta_{i1} + r - 2 \beta_{i1} r$, $\beta_{i1} = \frac{1 + \sqrt{2 {sim}_i - 1}}{2}$,
+${sim}_i$ is the average similarity of all test cases in the same $T_i$, $\hat{n} = \lfloor n \times thres \rfloor$, $r$ is the error rate of the test oracle.

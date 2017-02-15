@@ -1,37 +1,51 @@
-\chapter{“生成-检验”系统的扩展}
+\chapter{框架扩展}
 \label{cha:ext}
 
-\section{引言}%2
-Debugging has long been recognized as one of the most time- and labour- costing activity in software engineering practice. To accelerate debugging process, recently a series of ``generate-and-validate" systems are proposed to generate fix suggestions to programmers so that a buggy program can pass a certain test suite.
-However, two major drawbacks prevents existing systems from practical usage. First, most systems generate program mutations that include only one location of changes in the program. As a result, bugs that require fixes at multi-location, which widely exists in real coding practice, can never be fixed. Second, reported experimental results show that the fix generation time can be too long that programmers may take less time fixing the bug manually.
+\section{引言}%1.5
+基于“生成-检验”框架的程序自动修复系统以源代码和其对应的测试用例为输入，输出一组能够使测试集中所有测试用例通过的程序变体供开发人员参考。从设计的目标来看，“生成-检验”系统希望能够接手开发人员的调试工作，提高软件开发效率。然而从实验数据来看，现有系统在修复规模稍大的程序时速度仍然比较慢。例如，SPR在实验对象程序php上常常需要几个小时才能完成修复，我们实现的系统PFDebug在修复Closure Compiler上的错误时也要花费几个小时。
+另一方面，由于系统中搜索引擎能够在有限时间内搜索完的搜索空间有限，现有系统一般只能在单一位置生成如表达式替换、方法替换等比较简单的修改方案，导致现有系统的修复正确率也不太高，例如SPR在GenProg的测试集上修复了39/69个错误，PFDebug修复了24/357个错误。由于速度慢、正确率低，基于“生成-检验”框架的自动修复系统与实际应用仍有一定的距离。
 
-In this paper, we propose \SmartDebug, an interactive Java debug assistant that implements a generate-and-validate system while aiming to overcome these two drawbacks. More than existing systems, it utilizes programmers' judgment of program running state by taking in ``Checkpoints", a user-interface we provide for recording programmers' expectations of program running at arbitrary execution positions, so that complicated debug tasks can be split into small fragment of tasks that are solvable separately yet automatically. Therefore \SmartDebug is able to work with bugs that require modifications on several locations to be fixed. \SmartDebug presented in this paper is an upgraded system of our previous work \cite{Guo:2016:SID:2950290.2983971}. It implements our newly proposed optimization strategy called ``early filtration", which filter out mutations that are impossible to fix the program before they enter into the validation phase, so that the search space is dramatically reduced and generation process correspondingly accelerated.
+从使用者的角度，遵循“生成-检验”框架开发的系统在计算过程中间不需要开发人员的参与，也不需要了解程序错误相关的更多信息。这一特点使得系统使用非常方便——只要启动程序，等待结果就可以了。但是，考虑到现有自动调试技术的发展水平，这种模式未必是“生成-检验”系统的最佳利用方式。事实上，如果能够让开发人员与系统有一定的互动，充分利用开发人员的调试经验、对调试任务的理解、错误类型的初步判断等信息，系统的修复速度可能得到进一步的提高，搜索空间也可以更大，正确率也随之提高。
 
-\SmartDebug is implemented as an Eclipse plug-in integrated with the JDT debugger. For evaluation, we first run \SmartDebug against Defects4J to inspect the effectiveness of ``early filtration". Experimental results show that \SmartDebug is able to fix 24 versions, the largest amount ever reported on this benchmark. With early filtration, the mutations that enter into validation phase reduced to less than 10\% on 12 versions, and 20\% on 8 more versions. To prove that \SmartDebug is able to actually speed up the debugging process, we also evaluate the plug-in on 25 real bugs that appeared during the development process of programing exam. Results show that \SmartDebug is able to accelerate the debugging process on 7 bugs.
+基于上述想法，本章提出扩展“生成-检验”框架，使系统能够与开发人员充分共享信息，优化修复效果。扩展方式有两种，第一种是“交互式调试”。基本思想是，利用开发人员对程序的理解，向开发人员提供接口描述他对程序运行状态的判断，使系统能够将错误限定于较窄的范围内，提高错误定位的准确度。此外，系统允许开发人员将调试任务分为几个小任务逐个解决，这使得系统可以处理需要在多个位置修改才能完成的调试任务。第二种是针对单类别错误修复的可扩展框架，即规范“生成-检验”框架的基本结构，使得错误定位方法易于替换，搜索空间易于剪裁，方便在此结构上构造针对特定错误类型的修复系统。
 
-Structure of the paper is organized as follows. Background and related work are discussed in Section II. In Section III we explain the design and the two features of \SmartDebug. Implementation details are presented in Section IV while evaluation results are reported in Section V. Finally Section VI concludes the paper.
-\section{相关工作}%2
+为验证框架扩展的有效性，本章首先在已有框架上实现了“交互式调试”使用模式，形成了新的系统SmartDebug，并以多个实际程序为调试对象比较使用SmartDebug和人工调试的调试效率。实验表明，使用SmartDebug确实加速了调试任务完成过程。此外，本章整理了已有系统的框架结构，设计了方便扩展的开放接口，并在此框架上实现了针对空指针异常（NullPointerException）的修复系统。我们在CWE\_NullPointerDereference测试集上进行试验，成功修复了其中？？/？？个程序错误。
+
+本章的主要贡献如下：
+\begin{itemize}
+	\item 提出“交互调试”扩展方式并实现，形成新的系统SmartDebug。在一组真实程序上进行实验，结果表明SmartDebug能够加速开发人员完成调试任务的过程
+	\item 提出将现有系统扩展为针对特定类别错误修复系统的扩展方式，并给出开放接口定义，将现有系统重构为可扩展框架xDebug
+	\item 在xDebug框架内实现针对Java空指针异常的修复系统NPEDebug，并在CWE\_NullPointerDereference测试集上完成实验，成功修复其中??/??个错误，证实xDebug的可用性
+\end{itemize}
 
 \section{交互式调试}%8
+\subsection{概述}%0.5
 介绍“交互式调试”的基本思想，阐述将其引入后“生成-检验”框架应做出的相应调整及其对系统错误定位模块和搜索模块的正面作用。
 The interactive debugging usage model aims to take advantage of programmers' understanding of the program under test to break down complicated bugs into simple fractions and narrow down possible bug locations to improve the debug efficiency.
 
-From the programmers' perspective, \SmartDebug works as a personal consultant. During the common debugging process using JDT debug frontend, the programmer is able to describe his judgment of the program running state at a certain point of execution to \SmartDebug through \textit{Checkpoints}. If the program executes correctly, the programmer can mark down this execution point as ``correct". Otherwise, he or she can input a boolean expression that should evaluate to \texttt{true} if the program runs correctly as a description of his or her expectations.
+From the programmers' perspective, SmartDebug works as a personal consultant. During the common debugging process using JDT debug frontend, the programmer is able to describe his judgment of the program running state at a certain point of execution to SmartDebug through \textit{Checkpoints}. If the program executes correctly, the programmer can mark down this execution point as ``correct". Otherwise, he or she can input a boolean expression that should evaluate to \texttt{true} if the program runs correctly as a description of his or her expectations.
 
-\SmartDebug tracks the current debugging process. Figure 2 shows a snapshot of the debug process control panel. The panel lists every checkpoint and their current satisfaction status. For each failing test case, \SmartDebug will find the first failing checkpoint it encounters during execution. The programmer may choose any failing checkpoints as the debug target in the next step.
+SmartDebug tracks the current debugging process. Figure 2 shows a snapshot of the debug process control panel. The panel lists every checkpoint and their current satisfaction status. For each failing test case, SmartDebug will find the first failing checkpoint it encounters during execution. The programmer may choose any failing checkpoints as the debug target in the next step.
 
-When searching for fixes, the fault localizer utilizes the information of checkpoint to achieve more accurate fault localization. We adopt the Ochiai\cite{Abreu:2006:ESC:1193217.1194368} fault localization metric, however the execution trace of the test case containing the target checkpoint is divided into two segments by the last correct checkpoint. The first segment is counted as a successful execution trace, while the second failing. Only code lines covered by the second segment will be treated as possible fix positions. Therefore \SmartDebug is able to focus on a possibly small fraction of programs.
+When searching for fixes, the fault localizer utilizes the information of checkpoint to achieve more accurate fault localization. We adopt the Ochiai\cite{Abreu:2006:ESC:1193217.1194368} fault localization metric, however the execution trace of the test case containing the target checkpoint is divided into two segments by the last correct checkpoint. The first segment is counted as a successful execution trace, while the second failing. Only code lines covered by the second segment will be treated as possible fix positions. Therefore SmartDebug is able to focus on a possibly small fraction of programs.
 
 In the validation process, we do not rigorously require the candidate fixes to pass all test cases, instead we report every fix that can fix the target checkpoint while we rank the fixes according to the number of test cases the program passes if they are applied.
-\section{Tool Design}
 
-Figure 1 shows the system architecture of \SmartDebug. \SmartDebug consists two major components, the \textit{Interactive Frontend} and the \textit{Fix Generation Backend}. The Interactive Frontend provides facilities for programmers to describe their judgments and expectations of the program running state through ``Checkpoints" (\textit{Checkpoint Manager}). It also tracks the debugging process of the program, i.e. the satisfaction status of each Checkpoint on each test case, guiding the programmer through the whole debugging task (\textit{Debug Process Controller}). The \textit{Fix Generation Backend} first localizes the bug by collecting and analyzing the execution trace of each test case (the \textit{Fault Localizer)}, then generates program mutations within a predefined \textit{Search Space} according to the generated ranking list of suspicious fix sites (\textit{Search Engine}), after which some of the mutations go through a \textit{Filter} that removes mutations impossible to fix the bug. Finally the survived mutations are validated by applying them back to the program and rerun the test suite (\textit{Final Validator}).
+\subsection{相关工作}%1
 
-Search space specification is vital in fix correctness rate in generate-and-validate systems. \SmartDebug adopts the mutation patterns listed in Table I, whose first column lists the name of patterns and the second column provides brief explanations.
+\subsection{应用示例}%1
+\subsection{系统结构}%1
 
-\subsection{实验结果}
-We collected 25 versions of buggy programs from a coding exam for first year graduate students and asked students in the same year to debug these programs with or without help of \SmartDebug. We recorded the time cost on both situations and compared them in Table III.
+Figure 1 shows the system architecture of SmartDebug. SmartDebug consists two major components, the \textit{Interactive Frontend} and the \textit{Fix Generation Backend}. The Interactive Frontend provides facilities for programmers to describe their judgments and expectations of the program running state through ``Checkpoints" (\textit{Checkpoint Manager}). It also tracks the debugging process of the program, i.e. the satisfaction status of each Checkpoint on each test case, guiding the programmer through the whole debugging task (\textit{Debug Process Controller}). The \textit{Fix Generation Backend} first localizes the bug by collecting and analyzing the execution trace of each test case (the \textit{Fault Localizer)}, then generates program mutations within a predefined \textit{Search Space} according to the generated ranking list of suspicious fix sites (\textit{Search Engine}), after which some of the mutations go through a \textit{Filter} that removes mutations impossible to fix the bug. Finally the survived mutations are validated by applying them back to the program and rerun the test suite (\textit{Final Validator}).
 
+Search space specification is vital in fix correctness rate in generate-and-validate systems. SmartDebug adopts the mutation patterns listed in Table I, whose first column lists the name of patterns and the second column provides brief explanations.
+
+\subsection{扩展的错误定位}%0.6
+
+\subsection{调试进度控制}%1.5
+
+\subsection{实验结果}%1
+We collected 25 versions of buggy programs from a coding exam for first year graduate students and asked students in the same year to debug these programs with or without help of SmartDebug. We recorded the time cost on both situations and compared them in Table III.
 
 \begin{table}
 	\label{tab:sd-vs-human}
@@ -52,9 +66,16 @@ We collected 25 versions of buggy programs from a coding exam for first year gra
 	\end{tabular}
 \end{table}
 
+\subsection{总结}%0.5
+
 \section{针对单类别错误的可扩展框架}%10
+\subsection{概述}%1
 举例说明“生成-检验”系统在修复特定类别错误上的局限性，阐述将针对特定类别错误修复算法整合进“生成-检验”系统中的架构设计，以空指针（NPE）为例具体说明该架构的可扩展性。
+\subsection{相关工作}%2
 \subsection{框架设计}%3
-\subsection{扩展示例}%7
+%开放接口
+\subsection{扩展示例}%5
+%开放接口实现方式 4
+%实验 1
 单类别错误修复实例：在CWE-Null-Dereference测试集上的评测结果。
-\section{本章小结}%1
+\section{本章小结}%0.5
